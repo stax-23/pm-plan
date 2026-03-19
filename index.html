@@ -1624,14 +1624,22 @@ window.addEventListener('beforeunload',function(e){
     if(event==='INITIAL_SESSION'||event==='SIGNED_IN'){
       if(!session||!session.user){showLogin();return;}
       _u=session.user;
-      // Piccolo delay per assicurarsi che il token sia scritto
-      // e che Supabase accetti le richieste autenticate
-      await new Promise(function(r){setTimeout(r,event==='SIGNED_IN'?300:50);});
-      await load();
-      if(S.workspaces.length&&!S.workspaces.find(function(w){return w.id===S.activeWs;})){
-        S.activeWs=S.workspaces[0].id;
+      try{
+        console.log('[PMP] caricamento dati per:',session.user.email);
+        // Delay: assicura che il token sia disponibile per le chiamate API
+        await new Promise(function(res){setTimeout(res,event==='SIGNED_IN'?400:100);});
+        await load();
+        console.log('[PMP] dati caricati, workspace:',S.workspaces.length);
+        if(S.workspaces.length&&!S.workspaces.find(function(w){return w.id===S.activeWs;})){
+          S.activeWs=S.workspaces[0].id;
+        }
+        showApp(session.user);
+      }catch(bootErr){
+        console.error('[PMP] errore avvio app:',bootErr);
+        // Mostra l'app comunque — l'utente e' autenticato, i dati sono vuoti
+        S.workspaces=[];
+        showApp(session.user);
       }
-      showApp(session.user);
       return;
     }
 
