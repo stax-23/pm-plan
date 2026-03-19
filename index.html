@@ -1499,50 +1499,46 @@ async function lSubmit(){
   const pwd=document.getElementById('l-pwd').value||'';
   const pwd2=document.getElementById('l-pwd2').value||'';
   const btn=document.getElementById('l-btn');
-  const tab=_getTab(); // legge dal DOM, non dalla variabile
-  _ltab=tab;           // sincronizza la variabile
-  const label=tab==='in'?'Accedi':'Crea account';
-  console.log('[PMP] tab attivo:',tab,'email:',email);
+  const tab=_getTab();
+  _ltab=tab;
   lMsg('','');
   if(!email||!pwd){lMsg('err','Inserisci email e password.');return;}
   if(tab==='up'&&pwd.length<6){lMsg('err','Password minimo 6 caratteri.');return;}
   if(tab==='up'&&pwd!==pwd2){lMsg('err','Le password non coincidono.');return;}
-  if(_authing||_loginDone){return;} // previeni doppio submit o re-login
+  if(_authing){return;}
   _authing=true;
   btn.textContent='...';btn.disabled=true;
   try{
     if(tab==='up'){
-      // Controllo whitelist con timeout esplicito (evita Promise che non si risolve mai)
-      console.log('[PMP signup] controllo whitelist per:',email);
+      // Signup: controlla whitelist poi registra
       let wlOk=true;
       try{
-        const wlPromise=_SB.from('allowed_emails').select('email').eq('email',email).maybeSingle();
-        const timeout=new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),5000));
-        const res=await Promise.race([wlPromise,timeout]);
-        console.log('[PMP signup] whitelist result:',res);
-        // Se non c'e' errore e la riga non esiste: email non autorizzata
-        if(!res.error&&res.data===null){wlOk=false;}
-        // Se c'e' errore (policy, rete, timeout): lasciamo passare e Supabase blocchera' via trigger
-      }catch(wlErr){
-        console.warn('[PMP signup] whitelist check fallito (policy o timeout):',wlErr.message);
-        // Non blocchiamo — il trigger DB o Supabase gestira' il rifiuto
-      }
+        const to=new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),5000));
+        const res=await Promise.race([_SB.from('allowed_emails').select('email').eq('email',email).maybeSingle(),to]);
+        if(!res.error&&res.data===null)wlOk=false;
+      }catch(_){}
       if(!wlOk){lMsg('err',"Email non autorizzata. Contatta l'amministratore.");return;}
-      console.log('[PMP signup] tentativo registrazione...');
       const {data,error}=await _SB.auth.signUp({email:email,password:pwd});
-      console.log('[PMP signup] result:',{user:data?.user?.email,session:!!data?.session,error});
       if(error)throw error;
       if(data.user&&!data.session){lMsg('info','Registrazione ok! Controlla la tua email e poi accedi.');return;}
     }else{
-      console.log('[PMP login] tentativo per:',email);
+      // Login: chiama signIn, poi gestisce il boot DIRETTAMENTE qui
+      // senza aspettare onAuthStateChange (che causa il loop)
       const {data,error}=await _SB.auth.signInWithPassword({email:email,password:pwd});
-      console.log('[PMP login] result:',{data,error});
       if(error)throw error;
-      // Login OK — blocca futuri submit, onAuthStateChange gestisce showApp()
-      _loginDone=true;
+      // Boot diretto — non passare da onAuthStateChange
+      _u=data.user;
+      await load();
+      if(S.workspaces.length&&!S.workspaces.find(function(w){return w.id===S.activeWs;})){
+        S.activeWs=S.workspaces[0].id;
+      }
+      _booting=true; // blocca l'handler onAuthStateChange che arrivera' dopo
+      showApp(data.user);
+      setTimeout(function(){_booting=false;},3000);
+      return; // non passare per il finally — showApp ha gia' resettato _authing
     }
   }catch(e){
-    console.error('[PMP auth] errore:',e.message,e.code,e);
+    console.error('[PMP auth]',e.message,e.code);
     lMsg('err',lErrMap(e));
   }finally{
     _authing=false;
@@ -1550,6 +1546,7 @@ async function lSubmit(){
     btn.disabled=false;
   }
 }
+
 async function lOut(){
   // Resetta flag di autenticazione
   _loginDone=false;_authing=false;_booting=false;
@@ -1630,32 +1627,50 @@ window.addEventListener('beforeunload',function(e){
     console.log('[PMP] auth event:',event,'user:',session&&session.user?session.user.email:'none');
 
     if(event==='SIGNED_OUT'||event==='USER_DELETED'){
+      _booting=false;_authing=false;
+      S={workspaces:[],activeWs:null,activeProj:null,sec:'dashboard'};
       showLogin();
       return;
     }
 
-    if(event==='INITIAL_SESSION'||event==='SIGNED_IN'){
-      if(!session||!session.user){showLogin();return;}
-      // Evita che SIGNED_IN multipli (es. token refresh immediato) riavviino il boot
-      if(_booting){console.log('[PMP] boot gia in corso, skip');return;}
-      _booting=true;
-      _u=session.user;
-      try{
-        console.log('[PMP] caricamento dati per:',session.user.email,'event:',event);
-        await new Promise(function(res){setTimeout(res,event==='SIGNED_IN'?400:50);});
-        await load();
-        console.log('[PMP] dati caricati, workspace:',S.workspaces.length);
-        if(S.workspaces.length&&!S.workspaces.find(function(w){return w.id===S.activeWs;})){
-          S.activeWs=S.workspaces[0].id;
+    if(event==='INITIAL_SESSION'){
+      // Solo reload pagina: carica dati dalla sessione salvata
+      if(session&&session.user){
+        _u=session.user;
+        try{
+          await load();
+          if(S.workspaces.length&&!S.workspaces.find(function(w){return w.id===S.activeWs;})){
+            S.activeWs=S.workspaces[0].id;
+          }
+          showApp(session.user);
+        }catch(e){
+          console.error('[PMP] reload load error:',e);
+          S.workspaces=[];
+          showApp(session.user);
         }
-        showApp(session.user);
-      }catch(bootErr){
-        console.error('[PMP] errore avvio:',bootErr);
-        S.workspaces=[];
-        showApp(session.user);
-      }finally{
-        // Reset dopo 2s — permette un futuro re-login dopo logout
-        setTimeout(function(){_booting=false;},2000);
+      }else{
+        showLogin();
+      }
+      return;
+    }
+
+    if(event==='SIGNED_IN'){
+      // Login appena completato — se _booting e' true significa che lSubmit
+      // ha gia' gestito il boot direttamente: ignoriamo questo evento
+      if(_booting){
+        console.log('[PMP] SIGNED_IN ignorato: boot gia gestito da lSubmit');
+        return;
+      }
+      // Caso raro: SIGNED_IN senza boot diretto (es. OAuth) — gestiamo qui
+      if(session&&session.user){
+        _u=session.user;
+        try{
+          await load();
+          if(S.workspaces.length&&!S.workspaces.find(function(w){return w.id===S.activeWs;})){
+            S.activeWs=S.workspaces[0].id;
+          }
+          showApp(session.user);
+        }catch(e){S.workspaces=[];showApp(session.user);}
       }
       return;
     }
