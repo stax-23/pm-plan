@@ -296,8 +296,12 @@ const gv=id=>document.getElementById(id)?.value||'';
 const $=id=>document.getElementById(id);
 
 // ===== SUPABASE =====
-const _SB=supabase.createClient('https://ctapqhcxuwbxwnmnrfux.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN0YXBxaGN4dXdieHdubW5yZnV4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5MTMyNTksImV4cCI6MjA4OTQ4OTI1OX0.5coWgVxGY0Pwz62iiZrS7otiYuXvdDPsAQoPddFpNCY');
-let _u=null,_stimer=null,_hasRow=null,_booting=false,_authing=false;
+const _SB=supabase.createClient(
+  'https://ctapqhcxuwbxwnmnrfux.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN0YXBxaGN4dXdieHdubW5yZnV4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5MTMyNTksImV4cCI6MjA4OTQ4OTI1OX0.5coWgVxGY0Pwz62iiZrS7otiYuXvdDPsAQoPddFpNCY',
+  {auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}}
+);
+let _u=null,_stimer=null,_hasRow=null,_booting=false,_authing=false,_loginDone=false;
 
 let _pendingSave=false; // true = ci sono modifiche non ancora salvate
 
@@ -1503,7 +1507,7 @@ async function lSubmit(){
   if(!email||!pwd){lMsg('err','Inserisci email e password.');return;}
   if(tab==='up'&&pwd.length<6){lMsg('err','Password minimo 6 caratteri.');return;}
   if(tab==='up'&&pwd!==pwd2){lMsg('err','Le password non coincidono.');return;}
-  if(_authing){return;} // previeni doppio submit
+  if(_authing||_loginDone){return;} // previeni doppio submit o re-login
   _authing=true;
   btn.textContent='...';btn.disabled=true;
   try{
@@ -1534,6 +1538,8 @@ async function lSubmit(){
       const {data,error}=await _SB.auth.signInWithPassword({email:email,password:pwd});
       console.log('[PMP login] result:',{data,error});
       if(error)throw error;
+      // Login OK — blocca futuri submit, onAuthStateChange gestisce showApp()
+      _loginDone=true;
     }
   }catch(e){
     console.error('[PMP auth] errore:',e.message,e.code,e);
@@ -1545,6 +1551,8 @@ async function lSubmit(){
   }
 }
 async function lOut(){
+  // Resetta flag di autenticazione
+  _loginDone=false;_authing=false;_booting=false;
   // Salva immediatamente prima di uscire
   if(_pendingSave){
     const el=document.getElementById('sync-status');
@@ -1604,6 +1612,8 @@ window.addEventListener('beforeunload',function(e){
 
   function showApp(user){
     _u=user;
+    _loginDone=false; // resetta per permettere futuri login dopo logout
+    _authing=false;
     document.getElementById('login-screen').style.display='none';
     document.getElementById('app').style.display='flex';
     rUpill();rWsSel();rSidebar();rSecNav();rTopbar();rContent();
