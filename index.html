@@ -258,6 +258,7 @@ textarea{resize:vertical;min-height:68px}
     <div id="snc"></div>
     <div class="sfooter">
       <div id="u-pill"></div>
+      <div id="sync-status" style="font-size:10px;color:rgba(100,220,130,.7);padding:0 14px 6px;min-height:14px"></div>
       <div class="nitem" onclick="showImpExp()"><span class="nicon">⬆⬇</span>Import / Export</div>
       <div class="nitem" style="color:rgba(255,120,120,.65)" onclick="lOut()">⎋ Esci</div>
     </div>
@@ -298,10 +299,22 @@ const $=id=>document.getElementById(id);
 const _SB=supabase.createClient('https://ctapqhcxuwbxwnmnrfux.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN0YXBxaGN4dXdieHdubW5yZnV4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5MTMyNTksImV4cCI6MjA4OTQ4OTI1OX0.5coWgVxGY0Pwz62iiZrS7otiYuXvdDPsAQoPddFpNCY');
 let _u=null,_stimer=null,_hasRow=null;
 
+let _pendingSave=false; // true = ci sono modifiche non ancora salvate
+
 function save(){
+  _pendingSave=true;
+  sbSaved(false); // mostra indicatore "non salvato"
   clearTimeout(_stimer);
-  _stimer=setTimeout(_sbSave,1000);
+  _stimer=setTimeout(_sbSave,1200);
 }
+
+// Salvataggio immediato (es. prima del logout) — bypassa il debounce
+async function saveNow(){
+  if(!_pendingSave&&_hasRow!==null)return; // niente da salvare
+  clearTimeout(_stimer);
+  await _sbSave();
+}
+
 async function _sbSave(){
   if(!_u)return;
   sbSync(true);
@@ -309,20 +322,37 @@ async function _sbSave(){
     const ws=JSON.parse(JSON.stringify(S.workspaces));
     const now=new Date().toISOString();
     if(_hasRow===null){
-      const {data}=await _SB.from('pmp_data').select('id').eq('user_id',_u.id).maybeSingle();
+      const {data,error:selErr}=await _SB.from('pmp_data').select('id').eq('user_id',_u.id).maybeSingle();
+      if(selErr){console.error('[PMP save] select error:',selErr);return;}
       _hasRow=!!data;
     }
     let err;
     if(_hasRow){
-      ({error:err}=await _SB.from('pmp_data').update({workspaces:ws,updated_at:now}).eq('user_id',_u.id));
+      ({error:err}=await _SB.from('pmp_data')
+        .update({workspaces:ws,updated_at:now})
+        .eq('user_id',_u.id));
     }else{
-      ({error:err}=await _SB.from('pmp_data').insert({user_id:_u.id,workspaces:ws,updated_at:now}));
+      ({error:err}=await _SB.from('pmp_data')
+        .insert({user_id:_u.id,workspaces:ws,updated_at:now}));
       if(!err)_hasRow=true;
       if(err&&err.code==='23505'){_hasRow=true;setTimeout(_sbSave,200);return;}
     }
-    if(err){console.error('[PMP save]',err);toast('Errore sync','x');}
-  }catch(e){console.error('[PMP save]',e);}
-  finally{sbSync(false);}
+    if(err){
+      console.error('[PMP save]',err.code,err.message);
+      toast('Errore sync — riprovo...','x');
+      // Retry dopo 4 secondi
+      setTimeout(_sbSave,4000);
+    }else{
+      _pendingSave=false;
+      sbSaved(true); // mostra "salvato"
+      console.log('[PMP save] OK',new Date().toLocaleTimeString());
+    }
+  }catch(e){
+    console.error('[PMP save] exception:',e);
+    toast('Errore connessione','x');
+  }finally{
+    sbSync(false);
+  }
 }
 async function load(){
   if(!_u)return;
@@ -335,7 +365,22 @@ async function load(){
   }catch(e){S.workspaces=[];}
   finally{sbSync(false);}
 }
-function sbSync(on){const b=document.getElementById('sync-bar');if(b)b.style.display=on?'block':'none';}
+function sbSync(on){
+  const b=document.getElementById('sync-bar');
+  if(b)b.style.display=on?'block':'none';
+}
+function sbSaved(saved){
+  // Aggiorna l'indicatore di stato nella sidebar
+  const el=document.getElementById('sync-status');
+  if(!el)return;
+  if(saved){
+    el.textContent='Salvato';
+    el.style.color='rgba(100,220,130,.7)';
+  }else{
+    el.textContent='Modifiche non salvate...';
+    el.style.color='rgba(255,200,80,.8)';
+  }
+}
 
 
 function wsProjects(){
@@ -1490,7 +1535,14 @@ async function lSubmit(){
   }
 }
 async function lOut(){
+  // Salva immediatamente prima di uscire
+  if(_pendingSave){
+    const el=document.getElementById('sync-status');
+    if(el){el.textContent='Salvataggio...';el.style.color='rgba(255,200,80,.9)';}
+    await saveNow();
+  }
   _hasRow=null;
+  _pendingSave=false;
   S={workspaces:[],activeWs:null,activeProj:null,sec:'dashboard'};
   await _SB.auth.signOut();
   document.getElementById('login-screen').style.display='flex';
@@ -1502,6 +1554,14 @@ function rUpill(){
   const av=(_u.email||'??').substring(0,2).toUpperCase();
   el.innerHTML='<div class="upill" onclick="lOut()" title="Clicca per uscire"><div class="upill-av">'+av+'</div><span class="upill-em">'+(_u.email||'')+'</span></div>';
 }
+
+// Avvisa l'utente se sta chiudendo con modifiche non salvate
+window.addEventListener('beforeunload',function(e){
+  if(_pendingSave){
+    e.preventDefault();
+    e.returnValue='Hai modifiche non salvate. Sei sicuro di voler uscire?';
+  }
+});
 
 // ===== INIT =====
 (async function(){
