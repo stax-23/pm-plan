@@ -297,7 +297,7 @@ const $=id=>document.getElementById(id);
 
 // ===== SUPABASE =====
 const _SB=supabase.createClient('https://ctapqhcxuwbxwnmnrfux.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN0YXBxaGN4dXdieHdubW5yZnV4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5MTMyNTksImV4cCI6MjA4OTQ4OTI1OX0.5coWgVxGY0Pwz62iiZrS7otiYuXvdDPsAQoPddFpNCY');
-let _u=null,_stimer=null,_hasRow=null;
+let _u=null,_stimer=null,_hasRow=null,_booting=false,_authing=false;
 
 let _pendingSave=false; // true = ci sono modifiche non ancora salvate
 
@@ -1503,6 +1503,8 @@ async function lSubmit(){
   if(!email||!pwd){lMsg('err','Inserisci email e password.');return;}
   if(tab==='up'&&pwd.length<6){lMsg('err','Password minimo 6 caratteri.');return;}
   if(tab==='up'&&pwd!==pwd2){lMsg('err','Le password non coincidono.');return;}
+  if(_authing){return;} // previeni doppio submit
+  _authing=true;
   btn.textContent='...';btn.disabled=true;
   try{
     if(tab==='up'){
@@ -1537,6 +1539,7 @@ async function lSubmit(){
     console.error('[PMP auth] errore:',e.message,e.code,e);
     lMsg('err',lErrMap(e));
   }finally{
+    _authing=false;
     btn.textContent=_getTab()==='in'?'Accedi':'Crea account';
     btn.disabled=false;
   }
@@ -1623,11 +1626,13 @@ window.addEventListener('beforeunload',function(e){
 
     if(event==='INITIAL_SESSION'||event==='SIGNED_IN'){
       if(!session||!session.user){showLogin();return;}
+      // Evita che SIGNED_IN multipli (es. token refresh immediato) riavviino il boot
+      if(_booting){console.log('[PMP] boot gia in corso, skip');return;}
+      _booting=true;
       _u=session.user;
       try{
-        console.log('[PMP] caricamento dati per:',session.user.email);
-        // Delay: assicura che il token sia disponibile per le chiamate API
-        await new Promise(function(res){setTimeout(res,event==='SIGNED_IN'?400:100);});
+        console.log('[PMP] caricamento dati per:',session.user.email,'event:',event);
+        await new Promise(function(res){setTimeout(res,event==='SIGNED_IN'?400:50);});
         await load();
         console.log('[PMP] dati caricati, workspace:',S.workspaces.length);
         if(S.workspaces.length&&!S.workspaces.find(function(w){return w.id===S.activeWs;})){
@@ -1635,10 +1640,12 @@ window.addEventListener('beforeunload',function(e){
         }
         showApp(session.user);
       }catch(bootErr){
-        console.error('[PMP] errore avvio app:',bootErr);
-        // Mostra l'app comunque — l'utente e' autenticato, i dati sono vuoti
+        console.error('[PMP] errore avvio:',bootErr);
         S.workspaces=[];
         showApp(session.user);
+      }finally{
+        // Reset dopo 2s — permette un futuro re-login dopo logout
+        setTimeout(function(){_booting=false;},2000);
       }
       return;
     }
