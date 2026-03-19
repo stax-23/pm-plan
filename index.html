@@ -1161,49 +1161,103 @@ let _xlTargetWs=null,_xlTargetProj=null;
 
 // ── Mappa nomi colonne Excel → chiavi app ──────────────────────────────────
 const XL_MAP = {
-  // WBS
-  wbs: {id:'id',code:'code',description:'description',level:'level',owner:'owner',
-    'effort stimato (gg)':'estimatedDays','effort effettivo (gg)':'actualDays',
-    'completamento %':'completion',stimato:'estimatedDays',effettivo:'actualDays',
-    'avanzamento':'completion',note:'note'},
-  // Schedule
-  schedule: {id:'id',name:'name','nome attività':'name',wbsref:'wbsRef','wbs ref':'wbsRef',
-    owner:'owner',responsabile:'owner','data inizio':'start','data fine':'end',start:'start',end:'end',
-    '% compl.':'completion','% completamento':'completion',stato:'status',
-    'dipendenze (id)':'deps',dipendenze:'deps',deps:'deps',
-    milestone:'milestone',note:'note'},
-  // Risks
-  risks: {id:'id',data:'date','categoria':'category',descrizione:'description',
-    'descrizione rischio':'description','probabilità\n(1-3)':'prob','probabilità':'prob',prob:'prob',
-    'impatto\n(1-3)':'impact',impatto:'impact',impact:'impact',score:'score',risposta:'response',
-    'risk owner':'owner',owner:'owner',stato:'status','note / piano contingenza':'note',note:'note'},
-  // Issues
-  issues: {id:'id','data apertura':'opened',priorità:'priority','categoria':'category',
-    'descrizione issue':'description',descrizione:'description',owner:'owner','data target':'target',
-    'data chiusura':'closed',stato:'status','azioni intraprese':'actions'},
-  // Budget EVM
-  budget: {id:'id','wbs / fase':'wbs',wbs:'wbs',responsabile:'owner',owner:'owner',
-    'budget approvato (€)':'budget','budget':'budget','pv — planned value (€)':'pv',
-    'pv - planned value (€)':'pv',pv:'pv','ev — earned value (€)':'ev',
-    'ev - earned value (€)':'ev',ev:'ev','ac — actual cost (€)':'ac',
-    'ac - actual cost (€)':'ac',ac:'ac','% completamento':'completion',note:'note'},
-  // Changes
-  changes: {id:'id',data:'date',richiedente:'requestor','descrizione modifica':'description',
-    descrizione:'description','impatto scope':'impactScope','δ schedule (gg)':'impactSchedule',
-    'δ budget (€)':'impactBudget',priorità:'priority',stato:'status',
-    'approvato da':'approvedBy',note:'note'},
-  // Stakeholders
-  stakeholders: {id:'id',nome:'name','ruolo / organizzazione':'role',ruolo:'role',
-    contatto:'contact','interesse\n(1-5)':'interest',interesse:'interest',
-    'influenza\n(1-5)':'influence',influenza:'influence',atteggiamento:'attitude',
-    'freq. comm.':'commFreq','freq. comunicazione':'commFreq',aspettative:'expectations',
-    'strategia engagement':'strategy','strategia di engagement':'strategy',note:'note'},
-  // Lessons
-  lessons: {id:'id',data:'date','fase progetto':'phase',fase:'phase',categoria:'category',
-    'descrizione situazione':'situation',situazione:'situation',
-    '✅ cosa ha funzionato':'positive','cosa ha funzionato':'positive',
-    '❌ cosa non ha funzionato':'negative','cosa non ha funzionato':'negative',
-    raccomandazione:'recommendation',priorità:'priority',owner:'owner'},
+  wbs: {
+    'id':'id',
+    'codice wbs':'code','code':'code',
+    'descrizione attività':'description','descrizione attivita':'description','description':'description',
+    'livello':'level','level':'level',
+    'responsabile':'owner','owner':'owner',
+    'effort stimato (gg)':'estimatedDays','stimato':'estimatedDays',
+    'effort effettivo (gg)':'actualDays','effettivo':'actualDays',
+    'completamento %':'completion','avanzamento':'completion','completion':'completion',
+    'note':'note'
+  },
+  schedule: {
+    'id':'id',
+    'nome attività':'name','nome attivita':'name','name':'name',
+    'wbs ref':'wbsRef','wbsref':'wbsRef',
+    'responsabile':'owner','owner':'owner',
+    'data inizio':'start','start':'start',
+    'data fine':'end','end':'end',
+    '% compl.':'completion','% completamento':'completion','completion':'completion',
+    'stato':'status','status':'status',
+    'dipendenze (id)':'deps','dipendenze':'deps','deps':'deps',
+    'milestone':'milestone',
+    'note':'note'
+  },
+  risks: {
+    'id':'id',
+    'data':'date','date':'date',
+    'categoria':'category','category':'category',
+    'descrizione rischio':'description','descrizione':'description','description':'description',
+    'probabilit\u00e0\n(1-3)':'prob','probabilità':'prob','prob':'prob','probabilita':'prob',
+    'impatto\n(1-3)':'impact','impatto':'impact','impact':'impact',
+    'score':'score',
+    'risposta':'response','response':'response',
+    'risk owner':'owner','owner':'owner',
+    'stato':'status','status':'status',
+    'note / piano contingenza':'note','note':'note'
+  },
+  issues: {
+    'id':'id',
+    'data apertura':'opened','opened':'opened',
+    'priorità':'priority','priorita':'priority','priority':'priority',
+    'categoria':'category','category':'category',
+    'descrizione issue':'description','descrizione':'description','description':'description',
+    'owner':'owner',
+    'data target':'target','target':'target',
+    'data chiusura':'closed','closed':'closed',
+    'stato':'status','status':'status',
+    'azioni intraprese':'actions','actions':'actions'
+  },
+  budget: {
+    'wbs / fase':'wbs','wbs':'wbs',
+    'responsabile':'owner','owner':'owner',
+    'budget approvato (€)':'budget','budget':'budget',
+    'pv — planned value (€)':'pv','pv - planned value (€)':'pv','pv':'pv',
+    'ev — earned value (€)':'ev','ev - earned value (€)':'ev','ev':'ev',
+    'ac — actual cost (€)':'ac','ac - actual cost (€)':'ac','ac':'ac',
+    '% completamento':'completion','completion':'completion',
+    'note':'note'
+  },
+  changes: {
+    'id':'id',
+    'data':'date','date':'date',
+    'richiedente':'requestor','requestor':'requestor',
+    'descrizione modifica':'description','descrizione':'description','description':'description',
+    'impatto scope':'impactScope','impactscope':'impactScope',
+    'δ schedule (gg)':'impactSchedule','delta schedule (gg)':'impactSchedule','impactschedule':'impactSchedule',
+    'δ budget (€)':'impactBudget','delta budget (€)':'impactBudget','impactbudget':'impactBudget',
+    'priorità':'priority','priorita':'priority','priority':'priority',
+    'stato':'status','status':'status',
+    'approvato da':'approvedBy','approvedby':'approvedBy',
+    'note':'note'
+  },
+  stakeholders: {
+    'id':'id',
+    'nome':'name','name':'name',
+    'ruolo / organizzazione':'role','ruolo':'role','role':'role',
+    'contatto':'contact','contact':'contact',
+    'interesse\n(1-5)':'interest','interesse':'interest','interest':'interest',
+    'influenza\n(1-5)':'influence','influenza':'influence','influence':'influence',
+    'atteggiamento':'attitude','attitude':'attitude',
+    'freq. comm.':'commFreq','frequenza comunicazione':'commFreq','commfreq':'commFreq',
+    'aspettative':'expectations','expectations':'expectations',
+    'strategia engagement':'strategy','strategia di engagement':'strategy','strategy':'strategy',
+    'note':'note'
+  },
+  lessons: {
+    'id':'id',
+    'data':'date','date':'date',
+    'fase progetto':'phase','fase':'phase','phase':'phase',
+    'categoria':'category','category':'category',
+    'descrizione situazione':'situation','situazione':'situation','situation':'situation',
+    '✅ cosa ha funzionato':'positive','cosa ha funzionato':'positive','positive':'positive',
+    '❌ cosa non ha funzionato':'negative','cosa non ha funzionato':'negative','negative':'negative',
+    'raccomandazione':'recommendation','recommendation':'recommendation',
+    'priorità':'priority','priorita':'priority','priority':'priority',
+    'owner':'owner'
+  }
 };
 
 // Sheet name → key nelle sezioni lista
