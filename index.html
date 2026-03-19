@@ -1501,49 +1501,59 @@ async function lSubmit(){
   const btn=document.getElementById('l-btn');
   const tab=_getTab();
   _ltab=tab;
+  const label=tab==='in'?'Accedi':'Crea account';
   lMsg('','');
   if(!email||!pwd){lMsg('err','Inserisci email e password.');return;}
   if(tab==='up'&&pwd.length<6){lMsg('err','Password minimo 6 caratteri.');return;}
   if(tab==='up'&&pwd!==pwd2){lMsg('err','Le password non coincidono.');return;}
-  if(_authing){return;}
-  _authing=true;
   btn.textContent='...';btn.disabled=true;
   try{
     if(tab==='up'){
-      // Signup: controlla whitelist poi registra
+      // Signup: controlla whitelist con timeout
       let wlOk=true;
       try{
-        const to=new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),5000));
-        const res=await Promise.race([_SB.from('allowed_emails').select('email').eq('email',email).maybeSingle(),to]);
-        if(!res.error&&res.data===null)wlOk=false;
-      }catch(_){}
+        const wlRes=await Promise.race([
+          _SB.from('allowed_emails').select('email').eq('email',email).maybeSingle(),
+          new Promise(function(_,rej){setTimeout(function(){rej(new Error('timeout'));},5000);})
+        ]);
+        if(!wlRes.error&&wlRes.data===null){wlOk=false;}
+      }catch(e){console.warn('[PMP] whitelist timeout, proceeding');}
       if(!wlOk){lMsg('err',"Email non autorizzata. Contatta l'amministratore.");return;}
       const {data,error}=await _SB.auth.signUp({email:email,password:pwd});
       if(error)throw error;
-      if(data.user&&!data.session){lMsg('info','Registrazione ok! Controlla la tua email e poi accedi.');return;}
+      if(data.user&&!data.session){
+        lMsg('info',"Registrazione ok! Controlla la tua email per confermare l'account, poi accedi.");
+        return;
+      }
+      // Signup con auto-confirm: procedi come login
+      if(data.user&&data.session){
+        _u=data.user;
+        _hasRow=null;
+        await load();
+        if(S.workspaces.length&&!S.workspaces.find(function(w){return w.id===S.activeWs;})){
+          S.activeWs=S.workspaces[0].id;
+        }
+        _showApp(data.user);
+      }
     }else{
-      // Login: chiama signIn, poi gestisce il boot DIRETTAMENTE qui
-      // senza aspettare onAuthStateChange (che causa il loop)
+      // Login: gestisci tutto qui, non aspettare onAuthStateChange
       const {data,error}=await _SB.auth.signInWithPassword({email:email,password:pwd});
       if(error)throw error;
-      // Boot diretto — non passare da onAuthStateChange
-      _u=data.user;
-      await load();
-      if(S.workspaces.length&&!S.workspaces.find(function(w){return w.id===S.activeWs;})){
-        S.activeWs=S.workspaces[0].id;
+      if(data.user&&data.session){
+        _u=data.user;
+        _hasRow=null;
+        await load();
+        if(S.workspaces.length&&!S.workspaces.find(function(w){return w.id===S.activeWs;})){
+          S.activeWs=S.workspaces[0].id;
+        }
+        _showApp(data.user);
       }
-      _booting=true; // blocca l'handler onAuthStateChange che arrivera' dopo
-      showApp(data.user);
-      setTimeout(function(){_booting=false;},3000);
-      return; // non passare per il finally — showApp ha gia' resettato _authing
     }
   }catch(e){
     console.error('[PMP auth]',e.message,e.code);
     lMsg('err',lErrMap(e));
   }finally{
-    _authing=false;
-    btn.textContent=_getTab()==='in'?'Accedi':'Crea account';
-    btn.disabled=false;
+    btn.textContent=label;btn.disabled=false;
   }
 }
 
@@ -1560,8 +1570,7 @@ async function lOut(){
   _pendingSave=false;
   S={workspaces:[],activeWs:null,activeProj:null,sec:'dashboard'};
   await _SB.auth.signOut();
-  document.getElementById('login-screen').style.display='flex';
-  document.getElementById('app').style.display='none';
+  _showLogin();
 }
 function rUpill(){
   const el=document.getElementById('u-pill');
@@ -1583,65 +1592,67 @@ window.addEventListener('beforeunload',function(e){
   if(_pendingSave){e.preventDefault();e.returnValue='';}
 });
 
-(async function(){
+(function(){
 
-  function showApp(user){
+  function _showApp(user){
     _u=user;
     document.getElementById('login-screen').style.display='none';
     document.getElementById('app').style.display='flex';
     rUpill();rWsSel();rSidebar();rSecNav();rTopbar();rContent();
   }
-  function showLogin(){
+  function _showLogin(){
     _u=null;
     _hasRow=null;
     S={workspaces:[],activeWs:null,activeProj:null,sec:'dashboard'};
     document.getElementById('login-screen').style.display='flex';
     document.getElementById('app').style.display='none';
   }
-  async function bootWithSession(user){
-    _u=user;
-    await load();
-    if(S.workspaces.length&&!S.workspaces.find(function(w){return w.id===S.activeWs;})){
-      S.activeWs=S.workspaces[0].id;
-    }
-    showApp(user);
-  }
 
-  // Unica fonte di verita' per tutti i cambi di sessione
+  // Esponi queste funzioni globalmente (usate da lSubmit e lOut)
+  window._showApp=_showApp;
+  window._showLogin=_showLogin;
+
   _SB.auth.onAuthStateChange(async function(event,session){
     console.log('[PMP] auth event:',event,'user:',(session&&session.user?session.user.email:'none'));
 
     if(event==='SIGNED_OUT'||event==='USER_DELETED'){
-      showLogin();
+      _showLogin();
       return;
     }
 
     if(event==='INITIAL_SESSION'){
-      // CTRL+R o primo caricamento: se c'e' sessione valida, carica i dati
+      // Refresh pagina (CTRL+R) o primo caricamento
       if(session&&session.user){
-        await bootWithSession(session.user);
+        _u=session.user;
+        try{
+          await load();
+          if(S.workspaces.length&&!S.workspaces.find(function(w){return w.id===S.activeWs;})){
+            S.activeWs=S.workspaces[0].id;
+          }
+          _showApp(session.user);
+        }catch(e){
+          console.error('[PMP] INITIAL_SESSION load error:',e);
+          // Anche se load() fallisce, mostra l'app con dati vuoti
+          // piuttosto che rimandare al login
+          _showApp(session.user);
+        }
       }else{
-        showLogin();
-      }
-      return;
-    }
-
-    if(event==='SIGNED_IN'){
-      // Login appena completato tramite lSubmit
-      if(session&&session.user){
-        await bootWithSession(session.user);
+        _showLogin();
       }
       return;
     }
 
     if(event==='TOKEN_REFRESHED'){
-      // Rinnovo silenzioso del token — aggiorna utente senza ricaricare
+      // Rinnovo silenzioso — aggiorna solo l'utente
       if(session&&session.user)_u=session.user;
+      return;
     }
+
+    // SIGNED_IN viene ignorato qui: lSubmit lo gestisce direttamente
+    // per evitare race condition con il bottone "..."
   });
 
 }());
-
 </script>
 </body>
 </html>
