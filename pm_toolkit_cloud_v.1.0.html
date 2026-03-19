@@ -1,0 +1,1508 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Project Management Plan Cloud</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f0f4f9;
+  --sidebar:#0a1628;--sh:#152340;--sa:#1a3a6e;--sb:rgba(255,255,255,.06);
+  --b8:#0d2244;--b7:#1a3a6e;--b5:#2563eb;--b4:#3b82f6;--b3:#60a5fa;--b2:#bfdbfe;--b1:#dbeafe;--b0:#eff6ff;
+  --acc:#2563eb;--ach:#1d4ed8;--acl:#dbeafe;
+  --tx:#0a1628;--tm:#4b6082;--tl:#8fa3bf;
+  --sf:#ffffff;--s2:#f8fafd;--s3:#eef3fb;
+  --bd:#dde5f0;--bs:#c2d0e4;
+  --dn:#dc2626;--dl:#fef2f2;--wn:#d97706;--gn:#16a34a;
+  --r:12px;--rs:8px;--rx:5px;
+  --sh1:0 1px 4px rgba(10,22,40,.07),0 1px 2px rgba(10,22,40,.04);
+  --sh2:0 4px 12px rgba(10,22,40,.08),0 2px 4px rgba(10,22,40,.05);
+  --sh3:0 12px 32px rgba(10,22,40,.12);
+  --shb:0 4px 16px rgba(37,99,235,.18);
+  --ff:'Inter',sans-serif;--fd:'Plus Jakarta Sans',sans-serif;
+  --sw:260px;--th:58px;
+}
+html,body{height:100%;font-family:var(--ff);background:var(--bg);color:var(--tx);font-size:14px;line-height:1.55}
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--bs);border-radius:99px}
+#app{display:flex;height:100vh;overflow:hidden}
+#sidebar{width:var(--sw);background:var(--sidebar);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+#topbar{height:var(--th);background:var(--sf);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 28px;gap:12px;flex-shrink:0;box-shadow:var(--sh1)}
+#content{flex:1;overflow-y:auto;padding:32px}
+
+/* SIDEBAR */
+.slogo{padding:20px 16px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--sb)}
+.lmark{width:34px;height:34px;background:linear-gradient(135deg,#3b82f6,#1d4ed8);border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:800;color:#fff;font-size:13px;font-family:var(--fd);box-shadow:0 2px 8px rgba(37,99,235,.4)}
+.ltext{font-family:var(--fd);font-weight:700;font-size:12.5px;color:#fff;line-height:1.25}
+.lsub{font-size:9px;color:rgba(255,255,255,.3);letter-spacing:.6px;text-transform:uppercase;margin-top:1px}
+
+/* workspace picker */
+.ws-bar{padding:10px 12px 4px;border-bottom:1px solid var(--sb)}
+.ws-sel{width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:var(--rx);color:rgba(255,255,255,.8);padding:6px 8px;font-size:12px;font-family:var(--ff);cursor:pointer;outline:none;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='rgba(255,255,255,.4)'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center}
+.ws-sel:focus{border-color:rgba(255,255,255,.25)}
+.ws-sel option{background:#0a1628;color:#fff}
+.ws-actions{display:flex;gap:4px;margin-top:6px}
+.wbtn{flex:1;background:none;border:1px solid rgba(255,255,255,.1);border-radius:var(--rx);color:rgba(255,255,255,.5);font-size:10.5px;padding:4px 0;cursor:pointer;font-family:var(--ff);transition:all .15s}.wbtn:hover{background:rgba(255,255,255,.07);color:rgba(255,255,255,.85)}
+
+.ssect{padding:14px 12px 4px}
+.ssect-label{font-size:9px;font-weight:700;color:rgba(255,255,255,.25);text-transform:uppercase;letter-spacing:1px;padding:0 8px 7px}
+.pitem{display:flex;align-items:center;gap:7px;padding:7px 10px;border-radius:var(--rx);cursor:pointer;transition:background .15s;color:rgba(255,255,255,.65);font-size:12.5px;font-weight:500}
+.pitem:hover{background:var(--sh);color:rgba(255,255,255,.9)}
+.pitem.active{background:var(--sa);color:#fff}
+.pdot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.pa{margin-left:auto;display:flex;gap:2px}
+.pbtn{background:none;border:none;cursor:pointer;color:rgba(255,255,255,.35);padding:2px 4px;border-radius:3px;font-size:11px;transition:color .15s;line-height:1}.pbtn:hover{color:#fff}
+.pdbtn{color:rgba(255,120,120,.5)!important}.pdbtn:hover{color:#f87171!important}
+
+.snav{padding:4px 12px 8px}
+.nitem{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:var(--rx);cursor:pointer;transition:all .15s;color:rgba(255,255,255,.52);font-size:12px;font-weight:500}
+.nitem:hover{background:var(--sh);color:rgba(255,255,255,.85)}
+.nitem.active{background:var(--sa);color:#fff;box-shadow:inset 2px 0 0 var(--b3)}
+.nicon{font-size:13px;width:16px;text-align:center;flex-shrink:0}
+.sfooter{margin-top:auto;padding:10px 12px;border-top:1px solid var(--sb)}
+
+/* TOPBAR */
+.tbc{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--tm)}
+.tbc .sep{color:var(--bs)}.tbc .cur{color:var(--tx);font-weight:600;font-family:var(--fd)}
+.tbr{margin-left:auto;display:flex;align-items:center;gap:8px}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--rs);font-size:13px;font-weight:500;cursor:pointer;border:none;transition:all .15s;font-family:var(--ff);white-space:nowrap}
+.btnp{background:var(--acc);color:#fff;box-shadow:var(--shb)}.btnp:hover{background:var(--ach)}
+.btng{background:transparent;color:var(--tm);border:1px solid var(--bd)}.btng:hover{background:var(--s2);color:var(--tx)}
+.btnd{background:var(--dn);color:#fff}.btnd:hover{background:#b91c1c}
+.bsm{padding:6px 12px;font-size:12px}
+
+/* CARDS */
+.card{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);box-shadow:var(--sh1)}
+
+/* TABLES */
+.tw{overflow-x:auto;border-radius:var(--r);border:1px solid var(--bd);box-shadow:var(--sh1)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead{background:linear-gradient(90deg,var(--b8),var(--b7));position:sticky;top:0;z-index:2}
+thead th{padding:10px 14px;text-align:left;font-family:var(--fd);font-size:10.5px;font-weight:700;color:rgba(255,255,255,.88);letter-spacing:.4px;white-space:nowrap;border-right:1px solid rgba(255,255,255,.06)}
+thead th:last-child{border-right:none}
+tbody tr{border-bottom:1px solid var(--bd);transition:background .1s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:var(--b0)}
+tbody td{padding:9px 14px;vertical-align:middle;border-right:1px solid var(--bd)}
+tbody td:last-child{border-right:none}
+
+/* FORMS */
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:10.5px;font-weight:700;color:var(--tm);text-transform:uppercase;letter-spacing:.5px}
+input[type=text],input[type=number],input[type=date],textarea,select{width:100%;padding:8px 12px;border:1.5px solid var(--bd);border-radius:var(--rs);font-size:13.5px;font-family:var(--ff);color:var(--tx);background:var(--sf);transition:border-color .15s,box-shadow .15s;outline:none}
+input:focus,textarea:focus,select:focus{border-color:var(--acc);box-shadow:0 0 0 3px rgba(37,99,235,.09)}
+textarea{resize:vertical;min-height:68px}
+.fg{display:grid;gap:16px}.fg2{grid-template-columns:1fr 1fr}.fg3{grid-template-columns:1fr 1fr 1fr}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:99px;font-size:11.5px;font-weight:600}
+.bg-green{background:#dcfce7;color:#15803d}.bg-red{background:#fee2e2;color:#b91c1c}.bg-yellow{background:#fef9c3;color:#92400e}
+.bg-blue{background:#dbeafe;color:#1d4ed8}.bg-gray{background:#f1f5f9;color:#475569}.bg-orange{background:#ffedd5;color:#c2410c}
+.bg-indigo{background:#e0e7ff;color:#4338ca}
+
+/* MODAL */
+.mo{position:fixed;inset:0;background:rgba(8,18,36,.52);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+.modal{background:var(--sf);border-radius:16px;box-shadow:var(--sh3);width:100%;max-height:90vh;display:flex;flex-direction:column;animation:mi .18s ease;border:1px solid var(--bd)}
+.msm{max-width:460px}.mmd{max-width:620px}.mlg{max-width:820px}.mxl{max-width:1000px}
+@keyframes mi{from{opacity:0;transform:translateY(-12px) scale(.98)}to{opacity:1;transform:none}}
+.mhd{padding:18px 22px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:10px;flex-shrink:0}
+.mhd h2{font-family:var(--fd);font-size:15px;font-weight:700;flex:1}
+.mbody{padding:22px;overflow-y:auto}
+.mft{padding:14px 22px;border-top:1px solid var(--bd);display:flex;justify-content:flex-end;gap:8px;flex-shrink:0;background:var(--s2);border-radius:0 0 16px 16px}
+.cx{background:none;border:none;font-size:17px;cursor:pointer;color:var(--tl);line-height:1;padding:4px 6px;border-radius:4px;transition:all .1s}.cx:hover{background:var(--s3);color:var(--tx)}
+
+/* PAGE HEADER */
+.phd{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:22px;gap:16px}
+.phd h1{font-family:var(--fd);font-size:21px;font-weight:800;letter-spacing:-.4px}
+.phd p{font-size:13px;color:var(--tm);margin-top:3px}
+
+/* KPI */
+.kgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:13px;margin-bottom:22px}
+.kcard{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:16px;box-shadow:var(--sh1);position:relative;overflow:hidden}
+.kcard::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--b4),var(--b5))}
+.klabel{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--tl);margin-bottom:7px}
+.kval{font-family:var(--fd);font-size:24px;font-weight:800;color:var(--tx);letter-spacing:-1.2px;line-height:1}
+.ksub{font-size:11px;color:var(--tl);margin-top:4px}
+
+.divider{height:1px;background:var(--bd);margin:18px 0}
+.empty{text-align:center;padding:48px 24px;color:var(--tm)}
+.empty-icon{font-size:34px;margin-bottom:12px;opacity:.4}
+.empty p{margin-bottom:16px;font-size:14px}
+
+.spill{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:21px;padding:0 6px;border-radius:5px;font-size:12px;font-weight:700}
+.sl{background:#dcfce7;color:#15803d}.sm{background:#fef9c3;color:#92400e}.sh{background:#fee2e2;color:#b91c1c}
+.pbar{height:6px;background:var(--bd);border-radius:99px;overflow:hidden;width:68px;display:inline-block;vertical-align:middle}
+.pfill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--b4),var(--b5))}
+
+.ac{display:flex;gap:4px}
+.reb{background:none;border:1px solid var(--bd);border-radius:5px;cursor:pointer;padding:3px 8px;font-size:11.5px;color:var(--acc);transition:all .15s;font-family:var(--ff)}.reb:hover{background:var(--acl);border-color:var(--acc)}
+.deb{background:none;border:1px solid var(--bd);border-radius:5px;cursor:pointer;padding:3px 8px;font-size:11.5px;color:var(--dn);transition:all .15s;font-family:var(--ff)}.deb:hover{background:var(--dl);border-color:var(--dn)}
+
+.banner{background:linear-gradient(90deg,var(--b8),var(--b7));border-radius:var(--r) var(--r) 0 0;padding:12px 18px;display:flex;align-items:center;gap:10px}
+.banner h3{font-family:var(--fd);font-weight:700;font-size:13px;color:#fff}
+.banner .badd{font-size:11px;color:rgba(255,255,255,.5);margin-left:auto;cursor:pointer;transition:color .15s;background:none;border:none;font-family:var(--ff)}.banner .badd:hover{color:rgba(255,255,255,.9)}
+
+.info-tbl{width:100%;border-collapse:collapse}
+.info-tbl tr:not(:last-child){border-bottom:1px solid var(--bd)}
+.info-tbl td:first-child{width:190px;padding:10px 14px;font-size:10.5px;font-weight:700;color:var(--tm);text-transform:uppercase;letter-spacing:.4px;background:var(--s2);border-right:1px solid var(--bd)}
+.info-tbl td:last-child{padding:10px 14px;font-size:13.5px}
+
+/* HOME */
+.phome{display:grid;grid-template-columns:repeat(auto-fill,minmax(285px,1fr));gap:16px}
+.pcard{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);cursor:pointer;transition:all .2s;box-shadow:var(--sh1);overflow:hidden}
+.pcard:hover{box-shadow:var(--sh2);transform:translateY(-2px);border-color:var(--b2)}
+.pct{padding:16px 18px 12px;display:flex;gap:10px}
+.pcname{font-family:var(--fd);font-weight:700;font-size:14.5px;line-height:1.3}
+.pcmeta{font-size:12px;color:var(--tm);margin-top:2px}
+.pcfoot{display:flex;align-items:center;justify-content:space-between;padding:9px 18px;background:var(--s2);border-top:1px solid var(--bd)}
+.rdot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:3px}
+.rG{background:#16a34a}.rA{background:#d97706}.rR{background:#dc2626}.rN{background:#cbd5e1}
+
+.hero{background:linear-gradient(120deg,var(--b8) 0%,var(--b5) 100%);border-radius:var(--r);padding:26px 30px;margin-bottom:22px;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:20px;box-shadow:var(--shb)}
+.hero h2{font-family:var(--fd);font-size:19px;font-weight:800;letter-spacing:-.3px}
+.hero p{font-size:13px;color:rgba(255,255,255,.65);margin-top:3px}
+
+/* workspace home grid */
+.ws-home{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;margin-bottom:26px}
+.ws-card{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:20px;cursor:pointer;transition:all .2s;box-shadow:var(--sh1);display:flex;align-items:center;gap:14px}
+.ws-card:hover{box-shadow:var(--sh2);transform:translateY(-2px);border-color:var(--b2)}
+.ws-icon{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.ws-name{font-family:var(--fd);font-weight:700;font-size:14px}
+.ws-meta{font-size:12px;color:var(--tm);margin-top:2px}
+
+.toast{position:fixed;bottom:22px;right:22px;background:var(--b8);color:#fff;padding:11px 16px;border-radius:var(--rs);font-size:13px;font-weight:500;box-shadow:var(--sh3);z-index:9999;animation:tst .2s ease;display:flex;align-items:center;gap:8px;border:1px solid var(--b7)}
+@keyframes tst{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.idrop{border:2px dashed var(--bd);border-radius:var(--r);padding:32px;text-align:center;color:var(--tm);cursor:pointer;transition:all .2s}
+.idrop:hover{border-color:var(--acc);background:var(--b0);color:var(--acc)}
+
+/* ws badge in sidebar */
+.ws-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:99px;font-size:10px;font-weight:700;background:rgba(255,255,255,.08);color:rgba(255,255,255,.55);margin:0 12px 10px;border:1px solid rgba(255,255,255,.08)}
+
+#login-screen{position:fixed;inset:0;background:var(--sidebar);display:flex;align-items:center;justify-content:center;z-index:9999}
+.lbox{background:var(--sf);border-radius:20px;padding:44px 40px;width:100%;max-width:420px;box-shadow:var(--sh3)}
+.lbox-logo{width:44px;height:44px;background:linear-gradient(135deg,#3b82f6,#1d4ed8);border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:16px;font-family:var(--fd);margin:0 auto 18px;box-shadow:0 4px 14px rgba(37,99,235,.35)}
+.lbox-title{font-family:var(--fd);font-size:21px;font-weight:800;color:var(--tx);text-align:center;letter-spacing:-.4px;margin-bottom:3px}
+.lbox-sub{font-size:13px;color:var(--tm);text-align:center;margin-bottom:26px}
+.ltabs{display:flex;background:var(--s3);border-radius:var(--rs);padding:3px;margin-bottom:22px}
+.ltab{flex:1;padding:7px;border-radius:6px;text-align:center;font-size:13px;font-weight:500;cursor:pointer;color:var(--tm);transition:all .15s}
+.ltab.active{background:var(--sf);color:var(--tx);box-shadow:var(--sh1)}
+.lmsg{border-radius:var(--rs);padding:10px 14px;font-size:13px;margin-bottom:14px;display:none}
+.lmsg.err{background:var(--dl);border:1px solid var(--dn);color:var(--dn)}
+.lmsg.info{background:var(--b0);border:1px solid var(--acc);color:var(--acc)}
+.sync-bar{position:fixed;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--b5),var(--b3));z-index:9998;animation:spulse 1.4s ease-in-out infinite;display:none}
+@keyframes spulse{0%,100%{opacity:.5}50%{opacity:1}}
+.upill{display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:99px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);cursor:pointer;transition:background .15s;margin:0 4px 8px}
+.upill:hover{background:rgba(255,255,255,.14)}
+.upill-av{width:22px;height:22px;border-radius:50%;background:var(--acc);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0}
+.upill-em{font-size:11px;color:rgba(255,255,255,.7);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+</style>
+</head>
+<body>
+<div id="sync-bar" class="sync-bar"></div>
+<div id="login-screen">
+  <div class="lbox">
+    <div class="lbox-logo">PM</div>
+    <div class="lbox-title">Project Management Plan</div>
+    <div class="lbox-sub">Accedi per continuare</div>
+    <div class="ltabs">
+      <div class="ltab active" id="ltab-in" onclick="lTab('in')">Accedi</div>
+      <div class="ltab" id="ltab-up" onclick="lTab('up')">Registrati</div>
+    </div>
+    <div id="lmsg" class="lmsg"></div>
+    <div class="field" style="margin-bottom:14px">
+      <label>Email</label>
+      <input type="email" id="l-email" placeholder="nome@azienda.it" autocomplete="email" onkeydown="if(event.key==='Enter')lSubmit()"/>
+    </div>
+    <div class="field" style="margin-bottom:14px">
+      <label>Password</label>
+      <input type="password" id="l-pwd" placeholder="Minimo 6 caratteri" autocomplete="current-password" onkeydown="if(event.key==='Enter')lSubmit()"/>
+    </div>
+    <div class="field" id="l-pwd2-row" style="margin-bottom:14px;display:none">
+      <label>Ripeti Password</label>
+      <input type="password" id="l-pwd2" placeholder="Ripeti la password" onkeydown="if(event.key==='Enter')lSubmit()"/>
+    </div>
+    <button class="btn btnp" style="width:100%;justify-content:center" id="l-btn" onclick="lSubmit()">Accedi</button>
+  </div>
+</div>
+<div id="app" style="display:none">
+  <div id="sidebar">
+    <div class="slogo">
+      <div class="lmark">PM</div>
+      <div><div class="ltext">Project Management</div><div class="lsub">Plan Cloud</div></div>
+    </div>
+
+    <!-- Workspace selector -->
+    <div class="ws-bar">
+      <select class="ws-sel" id="ws-sel" onchange="selWs(this.value)"></select>
+      <div class="ws-actions">
+        <button class="wbtn" onclick="openNewWsModal()">＋ Workspace</button>
+        <button class="wbtn" onclick="openRenWsModal()">✏ Rinomina</button>
+        <button class="wbtn" style="color:rgba(255,120,120,.6)" onclick="delWs()">✕</button>
+      </div>
+    </div>
+
+    <div class="ssect">
+      <div class="ssect-label">Progetti</div>
+      <div id="project-list"></div>
+      <div style="padding:7px 4px 0">
+        <button class="btn btng bsm" style="width:100%;justify-content:center;color:rgba(255,255,255,.5);border-color:rgba(255,255,255,.1);font-size:11.5px" onclick="openNewProjModal()">＋ Nuovo Progetto</button>
+      </div>
+    </div>
+    <div id="snc"></div>
+    <div class="sfooter">
+      <div id="u-pill"></div>
+      <div class="nitem" onclick="showImpExp()"><span class="nicon">⬆⬇</span>Import / Export</div>
+      <div class="nitem" style="color:rgba(255,120,120,.65)" onclick="lOut()">⎋ Esci</div>
+    </div>
+  </div>
+
+  <div id="main">
+    <div id="topbar">
+      <div class="tbc">
+        <span id="tb-ws" style="font-size:11px;color:var(--tm)"></span>
+        <span class="sep" id="tb-ws-sep" style="display:none">›</span>
+        <span id="tb-proj" style="font-weight:600;color:var(--tx)">Project Management Plan</span>
+        <span class="sep" id="tb-sec-sep" style="display:none">›</span>
+        <span class="cur" id="tb-sec"></span>
+      </div>
+      <div class="tbr" id="tb-actions"></div>
+    </div>
+    <div id="content"></div>
+  </div>
+</div>
+<div id="modals"></div>
+
+<script>
+// ═══════════════════ CALLBACK REGISTRY (fix del bug delete) ═══════════════════
+// Invece di serializzare le callback con .toString(), le registriamo qui
+// e passiamo solo l'ID numerico all'onclick — le closure funzionano correttamente
+let _cbReg={};
+let _cbId=0;
+function regCb(fn){const id='cb'+(++_cbId);_cbReg[id]=fn;return id;}
+function runCb(id){if(_cbReg[id]){_cbReg[id]();delete _cbReg[id];}}
+
+// ═══════════════════ STATE ════════════════════════════════════════════════════
+const PC=['#2563eb','#0891b2','#16a34a','#7c3aed','#d97706','#dc2626','#be185d','#0d9488'];
+let S={workspaces:[],activeWs:null,activeProj:null,sec:'dashboard'};
+const gv=id=>document.getElementById(id)?.value||'';
+const $=id=>document.getElementById(id);
+
+// ===== SUPABASE =====
+const _SB=supabase.createClient('https://ctapqhcxuwbxwnmnrfux.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN0YXBxaGN4dXdieHdubW5yZnV4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5MTMyNTksImV4cCI6MjA4OTQ4OTI1OX0.5coWgVxGY0Pwz62iiZrS7otiYuXvdDPsAQoPddFpNCY');
+let _u=null,_stimer=null,_hasRow=null;
+
+function save(){
+  clearTimeout(_stimer);
+  _stimer=setTimeout(_sbSave,1000);
+}
+async function _sbSave(){
+  if(!_u)return;
+  sbSync(true);
+  try{
+    const ws=JSON.parse(JSON.stringify(S.workspaces));
+    const now=new Date().toISOString();
+    if(_hasRow===null){
+      const {data}=await _SB.from('pmp_data').select('id').eq('user_id',_u.id).maybeSingle();
+      _hasRow=!!data;
+    }
+    let err;
+    if(_hasRow){
+      ({error:err}=await _SB.from('pmp_data').update({workspaces:ws,updated_at:now}).eq('user_id',_u.id));
+    }else{
+      ({error:err}=await _SB.from('pmp_data').insert({user_id:_u.id,workspaces:ws,updated_at:now}));
+      if(!err)_hasRow=true;
+      if(err&&err.code==='23505'){_hasRow=true;setTimeout(_sbSave,200);return;}
+    }
+    if(err){console.error('[PMP save]',err);toast('Errore sync','x');}
+  }catch(e){console.error('[PMP save]',e);}
+  finally{sbSync(false);}
+}
+async function load(){
+  if(!_u)return;
+  _hasRow=null;
+  sbSync(true);
+  try{
+    const {data,error}=await _SB.from('pmp_data').select('workspaces').eq('user_id',_u.id).maybeSingle();
+    if(error){console.error('[PMP load]',error);throw error;}
+    S.workspaces=data?data.workspaces||[]:[]; _hasRow=!!data;
+  }catch(e){S.workspaces=[];}
+  finally{sbSync(false);}
+}
+function sbSync(on){const b=document.getElementById('sync-bar');if(b)b.style.display=on?'block':'none';}
+
+
+function wsProjects(){
+  const ws=S.workspaces.find(w=>w.id===S.activeWs);
+  return ws?ws.projects:[];
+}
+function activeProj(){return wsProjects().find(p=>p.id===S.activeProj)||null;}
+
+function newProj(name){
+  const projs=wsProjects();
+  const color=PC[projs.length%PC.length];
+  return{id:Date.now().toString(),name,color,
+    dashboard:{pm:'',sponsor:'',start:'',end:'',phase:'',rag:{scope:'',schedule:'',budget:'',quality:'',risks:''},milestones:[]},
+    charter:{projectName:name,code:'',pm:'',sponsor:'',start:'',end:'',budget:'',objective:'',secondaryObj:'',benefits:'',inScope:'',outScope:'',constraints:'',assumptions:'',dependencies:'',stakeholders:'',initialRisks:''},
+    wbs:[],schedule:[],raci:{roles:[],activities:[]},risks:[],issues:[],budget:[],changes:[],stakeholders:[],lessons:[]
+  };
+}
+function newWs(name,icon){
+  return{id:'ws'+Date.now(),name,icon:icon||'📁',projects:[]};
+}
+
+// ═══════════════════ HELPERS ══════════════════════════════════════════════════
+function toast(msg,icon='✓'){
+  const t=document.createElement('div');t.className='toast';
+  t.innerHTML=`<span style="color:var(--b3)">${icon}</span><span>${msg}</span>`;
+  document.body.appendChild(t);setTimeout(()=>t.remove(),2800);
+}
+
+// FIX: usa il registro callback invece di .toString()
+function cdel(msg,cbFn){
+  const cbId=regCb(cbFn);
+  const mid='del'+Date.now();
+  $('modals').insertAdjacentHTML('beforeend',`<div class="mo" id="${mid}">
+    <div class="modal msm">
+      <div class="mhd"><h2>Conferma eliminazione</h2><button class="cx" onclick="cm('${mid}')">✕</button></div>
+      <div class="mbody"><p style="font-size:14px;color:var(--tm)">${msg}</p></div>
+      <div class="mft">
+        <button class="btn btng" onclick="cm('${mid}')">Annulla</button>
+        <button class="btn btnd" onclick="cm('${mid}');runCb('${cbId}')">Elimina</button>
+      </div>
+    </div></div>`);
+}
+function cm(id){$(id)?.remove();}
+
+function ragB(v){if(!v)return`<span class="badge bg-gray">—</span>`;const m={G:'bg-green',A:'bg-yellow',R:'bg-red'};return`<span class="badge ${m[v]||'bg-gray'}">${v==='G'?'Verde':v==='A'?'Ambra':'Rosso'}</span>`;}
+function sB(s){
+  const m={'Aperta':'bg-red','Aperto':'bg-red','In Corso':'bg-blue','In corso':'bg-blue','Chiuso':'bg-green','Chiusa':'bg-green','Risolto':'bg-green','Completata':'bg-green','Approvata':'bg-green','Rifiutata':'bg-red','In Valutazione':'bg-yellow','Implementata':'bg-indigo','Alta':'bg-red','Media':'bg-yellow','Bassa':'bg-green','Identificato':'bg-orange','In Monitoraggio':'bg-blue','Mitigato':'bg-indigo','Accettato':'bg-gray','In Attesa':'bg-gray','Rinviata':'bg-orange','Sostenitore':'bg-green','Neutro':'bg-gray','Resistente':'bg-red'};
+  if(!s)return`<span class="badge bg-gray">—</span>`;
+  return`<span class="badge ${m[s]||'bg-gray'}">${s}</span>`;
+}
+function spill(s){const n=parseInt(s)||0;return`<span class="spill ${n<=2?'sl':n<=5?'sm':'sh'}">${n||'—'}</span>`;}
+
+// ═══════════════════ WORKSPACE ════════════════════════════════════════════════
+const WS_ICONS=['📁','🏢','🚀','⚙️','💼','🏗️','🌐','🔬','📊','🎯'];
+
+function rWsSel(){
+  const sel=$('ws-sel');if(!sel)return;
+  sel.innerHTML=S.workspaces.length
+    ?S.workspaces.map(w=>`<option value="${w.id}" ${w.id===S.activeWs?'selected':''}>${w.icon} ${w.name}</option>`).join('')
+    :`<option value="">— Nessun workspace —</option>`;
+}
+function selWs(id){
+  S.activeWs=id||null;S.activeProj=null;S.sec='dashboard';
+  save();rWsSel();rSidebar();rSecNav();rTopbar();rContent();
+}
+function openNewWsModal(){
+  const mid='mws';
+  $('modals').insertAdjacentHTML('beforeend',`<div class="mo" id="${mid}">
+    <div class="modal msm">
+      <div class="mhd"><h2>Nuovo Workspace</h2><button class="cx" onclick="cm('${mid}')">✕</button></div>
+      <div class="mbody">
+        <div class="field" style="margin-bottom:14px"><label>Nome Workspace</label><input type="text" id="ws_name" placeholder="es. Portfolio 2025, Team Alpha…" autofocus/></div>
+        <div class="field"><label>Icona</label>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px" id="ws_icons">
+            ${WS_ICONS.map((ic,i)=>`<button type="button" onclick="selWsIcon(this,'${ic}')" style="width:36px;height:36px;border-radius:8px;border:2px solid var(--bd);background:var(--s2);font-size:18px;cursor:pointer;transition:all .15s;${i===0?'border-color:var(--acc);background:var(--b1);':''}" data-icon="${ic}">${ic}</button>`).join('')}
+          </div>
+        </div>
+      </div>
+      <div class="mft">
+        <button class="btn btng" onclick="cm('${mid}')">Annulla</button>
+        <button class="btn btnp" onclick="subNewWs('${mid}')">Crea Workspace</button>
+      </div>
+    </div></div>`);
+  setTimeout(()=>$('ws_name')?.focus(),80);
+}
+let _wsSelIcon=WS_ICONS[0];
+function selWsIcon(btn,ic){
+  _wsSelIcon=ic;
+  document.querySelectorAll('#ws_icons button').forEach(b=>{b.style.borderColor='var(--bd)';b.style.background='var(--s2)';});
+  btn.style.borderColor='var(--acc)';btn.style.background='var(--b1)';
+}
+function subNewWs(mid){
+  const n=$('ws_name')?.value?.trim();if(!n)return;
+  const ws=newWs(n,_wsSelIcon||'📁');
+  S.workspaces.push(ws);S.activeWs=ws.id;S.activeProj=null;
+  save();cm(mid);rWsSel();rSidebar();rSecNav();rTopbar();rContent();
+  toast(`Workspace "${n}" creato`,'🎉');_wsSelIcon=WS_ICONS[0];
+}
+function openRenWsModal(){
+  const ws=S.workspaces.find(w=>w.id===S.activeWs);if(!ws)return;
+  const mid='mrws';
+  $('modals').insertAdjacentHTML('beforeend',`<div class="mo" id="${mid}">
+    <div class="modal msm">
+      <div class="mhd"><h2>Rinomina Workspace</h2><button class="cx" onclick="cm('${mid}')">✕</button></div>
+      <div class="mbody"><div class="field"><label>Nome</label><input type="text" id="rws_n" value="${ws.name}"/></div></div>
+      <div class="mft"><button class="btn btng" onclick="cm('${mid}')">Annulla</button><button class="btn btnp" onclick="doRenWs('${mid}')">Salva</button></div>
+    </div></div>`);
+}
+function doRenWs(mid){
+  const ws=S.workspaces.find(w=>w.id===S.activeWs);if(!ws)return;
+  const n=$('rws_n')?.value?.trim();if(!n)return;
+  ws.name=n;save();cm(mid);rWsSel();rTopbar();toast('Workspace rinominato');
+}
+function delWs(){
+  const ws=S.workspaces.find(w=>w.id===S.activeWs);if(!ws)return;
+  cdel(`Eliminare il workspace "<b>${ws.name}</b>" e tutti i suoi progetti?`,()=>{
+    S.workspaces=S.workspaces.filter(w=>w.id!==S.activeWs);
+    S.activeWs=S.workspaces[0]?.id||null;S.activeProj=null;
+    save();rWsSel();rSidebar();rSecNav();rTopbar();rContent();toast('Workspace eliminato','🗑');
+  });
+}
+
+// ═══════════════════ SIDEBAR / NAV ════════════════════════════════════════════
+const SECS=[
+  {id:'dashboard',i:'◉',l:'Dashboard'},
+  {id:'charter',i:'📋',l:'Project Charter'},
+  {id:'wbs',i:'🌿',l:'WBS'},
+  {id:'schedule',i:'📅',l:'Schedule'},
+  {id:'raci',i:'👥',l:'RACI Matrix'},
+  {id:'risks',i:'⚠️',l:'Risk Register'},
+  {id:'issues',i:'🐛',l:'Issue Log'},
+  {id:'budget',i:'💰',l:'Budget & EVM'},
+  {id:'changes',i:'🔄',l:'Change Log'},
+  {id:'stakeholders',i:'🤝',l:'Stakeholders'},
+  {id:'lessons',i:'📖',l:'Lessons Learned'},
+];
+
+function rSidebar(){
+  const projs=wsProjects();
+  $('project-list').innerHTML=projs.map(p=>`
+    <div class="pitem ${p.id===S.activeProj?'active':''}" onclick="selProj('${p.id}')">
+      <span class="pdot" style="background:${p.color}"></span>
+      <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.name}</span>
+      <span class="pa">
+        <button class="pbtn" onclick="event.stopPropagation();renProj('${p.id}')" title="Rinomina">✏</button>
+        <button class="pbtn pdbtn" onclick="event.stopPropagation();delProj('${p.id}')" title="Elimina">✕</button>
+      </span>
+    </div>`).join('');
+}
+function rSecNav(){
+  const c=$('snc');if(!S.activeProj){c.innerHTML='';return;}
+  c.innerHTML='<div class="snav">'+SECS.map(s=>`
+    <div class="nitem ${s.id===S.sec?'active':''}" onclick="selSec('${s.id}')">
+      <span class="nicon">${s.i}</span>${s.l}
+    </div>`).join('')+'</div>';
+}
+function rTopbar(){
+  const ws=S.workspaces.find(w=>w.id===S.activeWs);
+  const proj=activeProj();
+  const sec=SECS.find(s=>s.id===S.sec);
+  $('tb-ws').textContent=ws?ws.icon+' '+ws.name:'';
+  $('tb-ws-sep').style.display=ws&&proj?'':'none';
+  $('tb-proj').textContent=proj?proj.name:(ws?'Seleziona un progetto':'Project Management Plan');
+  $('tb-sec-sep').style.display=proj?'':'none';
+  $('tb-sec').textContent=proj&&sec?sec.l:'';
+}
+
+// ═══════════════════ PROJECTS ════════════════════════════════════════════════
+function openNewProjModal(){
+  if(!S.activeWs){toast('Seleziona o crea prima un Workspace','⚠');return;}
+  const mid='mnp';
+  $('modals').insertAdjacentHTML('beforeend',`<div class="mo" id="${mid}">
+    <div class="modal msm">
+      <div class="mhd"><h2>Nuovo Progetto</h2><button class="cx" onclick="cm('${mid}')">✕</button></div>
+      <div class="mbody">
+        <div class="field" style="margin-bottom:12px"><label>Nome progetto</label><input type="text" id="npn" placeholder="es. Migrazione ERP 2025" autofocus/></div>
+        <div class="field"><label>Codice (opzionale)</label><input type="text" id="npc" placeholder="es. PRJ-001"/></div>
+      </div>
+      <div class="mft"><button class="btn btng" onclick="cm('${mid}')">Annulla</button>
+        <button class="btn btnp" onclick="subNewProj('${mid}')">Crea Progetto</button></div>
+    </div></div>`);
+  setTimeout(()=>$('npn')?.focus(),80);
+}
+function subNewProj(mid){
+  const n=$('npn')?.value?.trim();if(!n)return;
+  const p=newProj(n);
+  const code=$('npc')?.value?.trim();
+  if(code)p.charter.code=code;
+  const ws=S.workspaces.find(w=>w.id===S.activeWs);
+  ws.projects.push(p);save();cm(mid);selProj(p.id);toast('Progetto creato');
+}
+function selProj(id){
+  S.activeProj=id;S.sec='dashboard';
+  rSidebar();rSecNav();rTopbar();rContent();
+}
+function delProj(id){
+  const p=wsProjects().find(x=>x.id===id);if(!p)return;
+  cdel(`Eliminare il progetto "<b>${p.name}</b>" e tutti i suoi dati?`,()=>{
+    const ws=S.workspaces.find(w=>w.id===S.activeWs);
+    ws.projects=ws.projects.filter(x=>x.id!==id);
+    if(S.activeProj===id){S.activeProj=null;S.sec='dashboard';}
+    save();rSidebar();rSecNav();rTopbar();rContent();toast('Progetto eliminato','🗑');
+  });
+}
+function renProj(id){
+  const p=wsProjects().find(x=>x.id===id);if(!p)return;
+  const mid='mrp';
+  $('modals').insertAdjacentHTML('beforeend',`<div class="mo" id="${mid}">
+    <div class="modal msm">
+      <div class="mhd"><h2>Rinomina Progetto</h2><button class="cx" onclick="cm('${mid}')">✕</button></div>
+      <div class="mbody"><div class="field"><label>Nome</label><input type="text" id="rpn" value="${p.name}"/></div></div>
+      <div class="mft"><button class="btn btng" onclick="cm('${mid}')">Annulla</button><button class="btn btnp" onclick="doRenProj('${id}','${mid}')">Salva</button></div>
+    </div></div>`);
+}
+function doRenProj(id,mid){
+  const n=$('rpn')?.value?.trim();if(!n)return;
+  wsProjects().find(x=>x.id===id).name=n;
+  save();cm(mid);rSidebar();rTopbar();toast('Rinominato');
+}
+function selSec(s){S.sec=s;rSecNav();rTopbar();rContent();}
+
+// ═══════════════════ CONTENT ROUTER ══════════════════════════════════════════
+function rContent(){
+  const c=$('content');$('tb-actions').innerHTML='';
+  if(!S.activeWs||!S.workspaces.find(w=>w.id===S.activeWs)){rHomeGlobal();return;}
+  if(!S.activeProj){rHomeWs();return;}
+  const proj=activeProj();if(!proj){rHomeWs();return;}
+  const tb=$('tb-actions');
+  const fn={dashboard:rDash,charter:rCharter,wbs:rList,schedule:rList,raci:rRaci,risks:rList,issues:rList,budget:rBudget,changes:rList,stakeholders:rList,lessons:rList}[S.sec];
+  if(fn)fn(proj,c,tb,S.sec);
+}
+
+// ── HOME GLOBALE (nessun workspace) ──
+function rHomeGlobal(){
+  const c=$('content');
+  c.innerHTML=`<div class="hero"><div><h2>Project Management Plan</h2><p>Organizza i tuoi progetti in Workspace. Ogni Workspace raggruppa un insieme di progetti correlati.</p></div><button class="btn btnp" onclick="openNewWsModal()">＋ Crea Workspace</button></div>
+  <p style="font-family:var(--fd);font-weight:700;font-size:15px;margin-bottom:14px;color:var(--tx)">Come funziona</p>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px">
+    ${[['🏢','Workspace','Raggruppa progetti per team, portfolio o categoria'],['📁','Progetto','Ogni progetto ha le sue sezioni: Charter, WBS, Schedule, RACI…'],['✏','Template vuoti','Compila solo i campi che ti servono, nel tuo formato']].map(([i,t,d])=>`
+    <div class="card" style="padding:20px"><div style="font-size:26px;margin-bottom:10px">${i}</div><div style="font-family:var(--fd);font-weight:700;margin-bottom:5px">${t}</div><div style="font-size:12.5px;color:var(--tm)">${d}</div></div>`).join('')}
+  </div>`;
+}
+
+// ── HOME WORKSPACE ──
+function rHomeWs(){
+  const ws=S.workspaces.find(w=>w.id===S.activeWs);
+  const c=$('content');const projs=ws.projects;
+  c.innerHTML=`<div class="hero"><div><h2>${ws.icon} ${ws.name}</h2><p>${projs.length} progetto${projs.length!==1?'i':''} in questo workspace</p></div><button class="btn btnp" onclick="openNewProjModal()">＋ Nuovo Progetto</button></div>
+  ${!projs.length?`<div class="empty"><div class="empty-icon">📂</div><p>Nessun progetto. Crea il primo progetto in questo workspace.</p><button class="btn btnp" onclick="openNewProjModal()">＋ Crea Progetto</button></div>`:`
+  <div class="phome">${projs.map(p=>{
+    const d=p.dashboard;const t=(p.schedule||[]).length;const dn=(p.schedule||[]).filter(x=>x.status==='Completata').length;
+    return`<div class="pcard" onclick="selProj('${p.id}')">
+      <div class="pct"><span class="pdot" style="background:${p.color};width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:4px"></span>
+        <div style="flex:1;min-width:0">
+          <div class="pcname">${p.name}</div>
+          <div class="pcmeta">${p.charter.code?p.charter.code+' · ':''}${d.pm||'—'} · ${d.phase||'—'}</div>
+          <div class="pcmeta" style="margin-top:1px">📅 ${d.start||'—'} → ${d.end||'—'}</div>
+        </div>
+      </div>
+      <div style="padding:0 18px 12px;display:flex;gap:8px">${['scope','schedule','budget'].map(k=>`<span style="display:flex;align-items:center;gap:3px;font-size:11px;color:var(--tm)"><span class="rdot r${d.rag[k]||'N'}"></span>${k.charAt(0).toUpperCase()+k.slice(1)}</span>`).join('')}</div>
+      <div class="pcfoot">
+        <span style="font-size:11.5px;color:var(--tm)">${dn}/${t} task · ${(p.risks||[]).filter(r=>r.status!=='Chiuso').length} rischi</span>
+        <div style="display:flex;gap:4px" onclick="event.stopPropagation()">
+          <button class="btn btng bsm" onclick="renProj('${p.id}')">✏</button>
+          <button class="btn btng bsm" style="color:var(--dn)" onclick="delProj('${p.id}')">✕</button>
+        </div>
+      </div>
+    </div>`;}).join('')}</div>`}`;
+}
+
+// ═══════════════════ DASHBOARD ════════════════════════════════════════════════
+function rDash(proj,c,tb){
+  const d=proj.dashboard;
+  tb.innerHTML=`<button class="btn btnp bsm" onclick="editDash('${proj.id}')">✏ Modifica</button>`;
+  const ragR=['scope','schedule','budget','quality','risks'].map(k=>`<tr>
+    <td style="font-size:10.5px;font-weight:700;color:var(--tm);text-transform:uppercase;letter-spacing:.4px;background:var(--s2);border-right:1px solid var(--bd);padding:10px 14px;width:110px">${{scope:'Scope',schedule:'Schedule',budget:'Budget',quality:'Qualità',risks:'Rischi'}[k]}</td>
+    <td style="padding:10px 14px">${ragB(d.rag[k])}</td></tr>`).join('');
+  const mlR=(d.milestones||[]).map((m,i)=>`<tr>
+    <td style="font-weight:500">${m.name||'—'}</td><td>${m.planned||'—'}</td><td>${m.actual||'—'}</td>
+    <td>${sB(m.status)}</td><td>${m.note||''}</td>
+    <td><div class="ac"><button class="reb" onclick="editML('${proj.id}',${i})">Modifica</button><button class="deb" onclick="delML('${proj.id}',${i})">✕</button></div></td></tr>`).join('');
+  const ro=(proj.risks||[]).filter(r=>r.status!=='Chiuso').length;
+  const io=(proj.issues||[]).filter(r=>r.status==='Aperta'||r.status==='In Corso').length;
+  const t=(proj.schedule||[]).length;const dn=(proj.schedule||[]).filter(x=>x.status==='Completata').length;
+  const pct=t?Math.round(dn/t*100):0;
+  c.innerHTML=`<div class="phd"><div><h1>Dashboard</h1><p>Panoramica stato del progetto</p></div></div>
+  <div class="kgrid">
+    <div class="kcard"><div class="klabel">Project Manager</div><div class="kval" style="font-size:16px;letter-spacing:-.2px;margin-top:4px">${d.pm||'—'}</div></div>
+    <div class="kcard"><div class="klabel">Sponsor</div><div class="kval" style="font-size:16px;letter-spacing:-.2px;margin-top:4px">${d.sponsor||'—'}</div></div>
+    <div class="kcard"><div class="klabel">Fase Attuale</div><div class="kval" style="font-size:16px;letter-spacing:-.2px;margin-top:4px">${d.phase||'—'}</div></div>
+    <div class="kcard"><div class="klabel">Data Fine</div><div class="kval" style="font-size:16px;letter-spacing:-.2px;margin-top:4px">${d.end||'—'}</div></div>
+    <div class="kcard"><div class="klabel">Avanzamento</div><div class="kval">${pct}%</div><div style="margin-top:8px"><div class="pbar" style="width:100%"><div class="pfill" style="width:${pct}%"></div></div></div></div>
+    <div class="kcard"><div class="klabel">Rischi Aperti</div><div class="kval" style="color:${ro>2?'var(--dn)':ro>0?'var(--wn)':'var(--gn)'}">${ro}</div><div class="ksub">su ${(proj.risks||[]).length} totali</div></div>
+    <div class="kcard"><div class="klabel">Issue Aperte</div><div class="kval" style="color:${io>0?'var(--dn)':'var(--gn)'}">${io}</div><div class="ksub">su ${(proj.issues||[]).length} totali</div></div>
+    <div class="kcard"><div class="klabel">Change Request</div><div class="kval">${(proj.changes||[]).length}</div><div class="ksub">${(proj.changes||[]).filter(x=>x.status==='In Valutazione').length} in valutazione</div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:250px 1fr;gap:18px">
+    <div class="card"><div class="banner"><h3>🚦 Status RAG</h3></div><table class="info-tbl">${ragR}</table></div>
+    <div class="card"><div class="banner"><h3>🏁 Milestone</h3><button class="badd" onclick="editML('${proj.id}',-1)">＋ Aggiungi</button></div>
+      ${!(d.milestones||[]).length?`<div class="empty" style="padding:22px"><p>Nessuna milestone</p></div>`:`
+      <div class="tw" style="border:none;border-radius:0 0 var(--r) var(--r)"><table>
+        <thead><tr><th>Milestone</th><th>Pianificata</th><th>Effettiva</th><th>Stato</th><th>Note</th><th></th></tr></thead>
+        <tbody>${mlR}</tbody></table></div>`}
+    </div>
+  </div>`;
+}
+function editDash(pid){
+  const d=activeProj().dashboard;const mid='mdash';
+  const ro=v=>`<option value="">—</option>${['G','A','R'].map(x=>`<option value="${x}" ${v===x?'selected':''}>${x==='G'?'Verde':x==='A'?'Ambra':'Rosso'}</option>`).join('')}`;
+  $('modals').insertAdjacentHTML('beforeend',`<div class="mo" id="${mid}"><div class="modal mlg">
+    <div class="mhd"><h2>Modifica Dashboard</h2><button class="cx" onclick="cm('${mid}')">✕</button></div>
+    <div class="mbody">
+      <div class="fg fg3" style="margin-bottom:16px">
+        <div class="field"><label>Project Manager</label><input type="text" id="d_pm" value="${d.pm||''}"/></div>
+        <div class="field"><label>Sponsor</label><input type="text" id="d_sp" value="${d.sponsor||''}"/></div>
+        <div class="field"><label>Fase</label><input type="text" id="d_ph" value="${d.phase||''}"/></div>
+        <div class="field"><label>Data Inizio</label><input type="date" id="d_st" value="${d.start||''}"/></div>
+        <div class="field"><label>Data Fine</label><input type="date" id="d_en" value="${d.end||''}"/></div>
+      </div>
+      <div class="divider"></div>
+      <p style="font-weight:700;font-family:var(--fd);margin-bottom:12px">Status RAG</p>
+      <div class="fg fg3">
+        <div class="field"><label>Scope</label><select id="rs">${ro(d.rag?.scope)}</select></div>
+        <div class="field"><label>Schedule</label><select id="rsc">${ro(d.rag?.schedule)}</select></div>
+        <div class="field"><label>Budget</label><select id="rb">${ro(d.rag?.budget)}</select></div>
+        <div class="field"><label>Qualità</label><select id="rq">${ro(d.rag?.quality)}</select></div>
+        <div class="field"><label>Rischi</label><select id="rr">${ro(d.rag?.risks)}</select></div>
+      </div>
+    </div>
+    <div class="mft"><button class="btn btng" onclick="cm('${mid}')">Annulla</button><button class="btn btnp" onclick="saveDash('${pid}','${mid}')">Salva</button></div>
+  </div></div>`);
+}
+function saveDash(pid,mid){
+  const proj=activeProj();
+  proj.dashboard={...proj.dashboard,pm:gv('d_pm'),sponsor:gv('d_sp'),phase:gv('d_ph'),start:gv('d_st'),end:gv('d_en'),
+    rag:{scope:gv('rs'),schedule:gv('rsc'),budget:gv('rb'),quality:gv('rq'),risks:gv('rr')}};
+  save();cm(mid);rContent();toast('Dashboard aggiornata');
+}
+function editML(pid,idx){
+  const proj=activeProj();if(!proj.dashboard.milestones)proj.dashboard.milestones=[];
+  const isN=idx===-1;const m=isN?{name:'',planned:'',actual:'',status:'',note:''}:proj.dashboard.milestones[idx];
+  const mid='mml';const so=['','In Attesa','In Corso','Completata','Rinviata'].map(s=>`<option ${m.status===s?'selected':''}>${s}</option>`).join('');
+  $('modals').insertAdjacentHTML('beforeend',`<div class="mo" id="${mid}"><div class="modal mmd">
+    <div class="mhd"><h2>${isN?'Aggiungi':'Modifica'} Milestone</h2><button class="cx" onclick="cm('${mid}')">✕</button></div>
+    <div class="mbody"><div class="fg fg2">
+      <div class="field" style="grid-column:1/-1"><label>Nome</label><input type="text" id="ml_n" value="${m.name||''}"/></div>
+      <div class="field"><label>Data Pianificata</label><input type="date" id="ml_p" value="${m.planned||''}"/></div>
+      <div class="field"><label>Data Effettiva</label><input type="date" id="ml_a" value="${m.actual||''}"/></div>
+      <div class="field"><label>Stato</label><select id="ml_s">${so}</select></div>
+      <div class="field"><label>Note</label><input type="text" id="ml_no" value="${m.note||''}"/></div>
+    </div></div>
+    <div class="mft"><button class="btn btng" onclick="cm('${mid}')">Annulla</button><button class="btn btnp" onclick="saveML('${pid}',${idx},'${mid}')">Salva</button></div>
+  </div></div>`);
+}
+function saveML(pid,idx,mid){
+  const proj=activeProj();
+  const m={name:gv('ml_n'),planned:gv('ml_p'),actual:gv('ml_a'),status:gv('ml_s'),note:gv('ml_no')};
+  if(idx===-1)proj.dashboard.milestones.push(m);else proj.dashboard.milestones[idx]=m;
+  save();cm(mid);rContent();toast('Milestone salvata');
+}
+function delML(pid,idx){
+  cdel('Eliminare questa milestone?',()=>{
+    activeProj().dashboard.milestones.splice(idx,1);
+    save();rContent();toast('Eliminata','🗑');
+  });
+}
+
+// ═══════════════════ CHARTER ═════════════════════════════════════════════════
+function rCharter(proj,c,tb){
+  const ch=proj.charter;
+  tb.innerHTML=`<button class="btn btnp bsm" onclick="editCharter('${proj.id}')">✏ Modifica Charter</button>`;
+  const sec=(title,rows)=>`<div class="card" style="margin-bottom:14px">
+    <div class="banner"><h3>${title}</h3></div>
+    <table class="info-tbl">${rows.map(([l,v])=>`<tr><td>${l}</td><td>${v||'<span style="color:var(--tl);font-style:italic">—</span>'}</td></tr>`).join('')}</table></div>`;
+  c.innerHTML=`<div class="phd"><div><h1>Project Charter</h1><p>Documento di autorizzazione formale del progetto</p></div></div>`+
+    sec('1 · Informazioni Generali',[['Nome Progetto',ch.projectName],['Codice',ch.code],['Project Manager',ch.pm],['Sponsor',ch.sponsor],['Data Inizio',ch.start],['Data Fine Prevista',ch.end],['Budget Approvato',ch.budget?`€ ${Number(ch.budget).toLocaleString('it-IT')}`:'']])+
+    sec('2 · Obiettivi & Benefici',[['Obiettivo Principale',ch.objective],['Obiettivi Secondari',ch.secondaryObj],['Benefici Attesi',ch.benefits]])+
+    sec('3 · Scope',[['Incluso nel Progetto',ch.inScope],['Escluso dal Progetto',ch.outScope]])+
+    sec('4 · Vincoli, Assunzioni & Dipendenze',[['Vincoli',ch.constraints],['Assunzioni',ch.assumptions],['Dipendenze Esterne',ch.dependencies]])+
+    sec('5 · Stakeholder Chiave & Rischi Iniziali',[['Stakeholder Chiave',ch.stakeholders],['Rischi Principali Iniziali',ch.initialRisks]]);
+}
+function editCharter(pid){
+  const ch=activeProj().charter;const mid='mch';
+  const fi=(id,l,v,t='text')=>`<div class="field"><label>${l}</label><input type="${t}" id="${id}" value="${(v||'').toString().replace(/"/g,'&quot;')}"/></div>`;
+  const ta=(id,l,v)=>`<div class="field"><label>${l}</label><textarea id="${id}">${v||''}</textarea></div>`;
+  $('modals').insertAdjacentHTML('beforeend',`<div class="mo" id="${mid}"><div class="modal mxl">
+    <div class="mhd"><h2>✏ Modifica Project Charter</h2><button class="cx" onclick="cm('${mid}')">✕</button></div>
+    <div class="mbody">
+      <div class="fg fg3" style="margin-bottom:16px">
+        ${fi('ch_pn','Nome Progetto',ch.projectName)}${fi('ch_cd','Codice',ch.code)}
+        ${fi('ch_pm','Project Manager',ch.pm)}${fi('ch_sp','Sponsor',ch.sponsor)}
+        ${fi('ch_st','Data Inizio',ch.start,'date')}${fi('ch_en','Data Fine',ch.end,'date')}
+        ${fi('ch_bu','Budget (€)',ch.budget,'number')}
+      </div><div class="divider"></div>
+      <div class="fg">${ta('ch_ob','Obiettivo Principale',ch.objective)}${ta('ch_so','Obiettivi Secondari',ch.secondaryObj)}${ta('ch_be','Benefici Attesi',ch.benefits)}</div>
+      <div class="divider"></div>
+      <div class="fg fg2">
+        ${ta('ch_in','Incluso nel Progetto',ch.inScope)}${ta('ch_ou','Escluso dal Progetto',ch.outScope)}
+        ${ta('ch_co','Vincoli',ch.constraints)}${ta('ch_as','Assunzioni',ch.assumptions)}
+        ${ta('ch_de','Dipendenze Esterne',ch.dependencies)}${ta('ch_sh','Stakeholder Chiave',ch.stakeholders)}
+        ${ta('ch_ri','Rischi Iniziali',ch.initialRisks)}
+      </div>
+    </div>
+    <div class="mft"><button class="btn btng" onclick="cm('${mid}')">Annulla</button><button class="btn btnp" onclick="saveCharter('${pid}','${mid}')">Salva</button></div>
+  </div></div>`);
+}
+function saveCharter(pid,mid){
+  const proj=activeProj();
+  proj.charter={projectName:gv('ch_pn'),code:gv('ch_cd'),pm:gv('ch_pm'),sponsor:gv('ch_sp'),start:gv('ch_st'),end:gv('ch_en'),budget:gv('ch_bu'),objective:gv('ch_ob'),secondaryObj:gv('ch_so'),benefits:gv('ch_be'),inScope:gv('ch_in'),outScope:gv('ch_ou'),constraints:gv('ch_co'),assumptions:gv('ch_as'),dependencies:gv('ch_de'),stakeholders:gv('ch_sh'),initialRisks:gv('ch_ri')};
+  save();cm(mid);rContent();toast('Project Charter salvato');
+}
+
+// ═══════════════════ LIST SECTIONS ════════════════════════════════════════════
+const LCFG={
+  wbs:{t:'WBS – Work Breakdown Structure',d:'Struttura gerarchica delle attività del progetto',a:'Attività WBS',
+    cols:['Codice','Descrizione','Livello','Responsabile','Stimato','Effettivo','Avanzamento','Note'],
+    row:r=>[r.code||'—',r.description||'—',r.level?`<span class="badge bg-blue">L${r.level}</span>`:'—',r.owner||'—',r.estimatedDays?r.estimatedDays+'gg':'—',r.actualDays?r.actualDays+'gg':'—',r.completion?`<span style="display:inline-flex;align-items:center;gap:6px"><div class="pbar"><div class="pfill" style="width:${r.completion}%"></div></div><span style="font-size:12px">${r.completion}%</span></span>`:'—',r.note||'']},
+  schedule:{t:'Schedule – Piano di Progetto',d:'Pianificazione attività con avanzamento e stato',a:'Attività',
+    cols:['ID','Attività','WBS','Responsabile','Inizio','Fine','Durata','% Compl.','Stato','Milestone'],
+    row:r=>[r.id||'—',`<b>${r.name||'—'}</b>`,r.wbsRef||'—',r.owner||'—',r.start||'—',r.end||'—',(r.start&&r.end?Math.max(0,Math.round((new Date(r.end)-new Date(r.start))/864e5))+'gg':'—'),r.completion?r.completion+'%':'—',sB(r.status),r.milestone?`<span class="badge bg-indigo">⚑ Sì</span>`:'—']},
+  risks:{t:'Risk Register',d:'Monitoraggio rischi · Score = Probabilità × Impatto (1-3)',a:'Rischio',
+    cols:['ID','Data','Categoria','Descrizione','Prob.','Imp.','Score','Risposta','Owner','Stato'],
+    row:r=>[r.id||'—',r.date||'—',r.category?`<span class="badge bg-indigo">${r.category}</span>`:'—',r.description||'—',r.prob||'—',r.impact||'—',spill((r.prob||0)*(r.impact||0)),r.response||'—',r.owner||'—',sB(r.status)]},
+  issues:{t:'Issue Log',d:'Tracciamento e risoluzione dei problemi aperti',a:'Issue',
+    cols:['ID','Data','Priorità','Categoria','Descrizione','Owner','Target','Stato','Azioni'],
+    row:r=>[r.id||'—',r.opened||'—',sB(r.priority),r.category?`<span class="badge bg-gray">${r.category}</span>`:'—',r.description||'—',r.owner||'—',r.target||'—',sB(r.status),r.actions||'']},
+  changes:{t:'Change Log – Gestione Modifiche',d:'Registro delle change request e impatti su scope / schedule / budget',a:'Change Request',
+    cols:['ID','Data','Richiedente','Descrizione','Impatto Scope','Δ Schedule','Δ Budget','Priorità','Stato','Approvato Da'],
+    row:r=>[r.id||'—',r.date||'—',r.requestor||'—',r.description||'—',r.impactScope||'—',r.impactSchedule?`+${r.impactSchedule}gg`:'—',r.impactBudget?`€${Number(r.impactBudget).toLocaleString('it-IT')}`:'—',sB(r.priority),sB(r.status),r.approvedBy||'—']},
+  stakeholders:{t:'Stakeholder Register',d:'Analisi e strategia di engagement',a:'Stakeholder',
+    cols:['ID','Nome','Ruolo','Interesse','Influenza','Atteggiamento','Strategia','Freq. Comm.'],
+    row:r=>[r.id||'—',`<b>${r.name||'—'}</b>`,r.role||'—',spill(r.interest),spill(r.influence),sB(r.attitude),r.strategy||'—',r.commFreq||'—']},
+  lessons:{t:'Lessons Learned',d:'Raccolta continua delle lezioni apprese durante il progetto',a:'Lezione',
+    cols:['ID','Data','Fase','Categoria','Situazione','✅ Cosa ha funzionato','❌ Non ha funzionato','Raccomandazione','Priorità'],
+    row:r=>[r.id||'—',r.date||'—',r.phase||'—',r.category?`<span class="badge bg-blue">${r.category}</span>`:'—',r.situation||'—',r.positive||'—',r.negative||'—',r.recommendation||'—',sB(r.priority)]}
+};
+
+function rList(proj,c,tb,key){
+  const cfg=LCFG[key];const items=proj[key]||[];
+  tb.innerHTML=`<button class="btn btnp bsm" onclick="openIM('${proj.id}','${key}',-1)">＋ Aggiungi ${cfg.a}</button>`;
+  const rows=items.map((r,i)=>`<tr>
+    ${cfg.row(r).map(v=>`<td>${v}</td>`).join('')}
+    <td><div class="ac">
+      <button class="reb" onclick="openIM('${proj.id}','${key}',${i})">Modifica</button>
+      <button class="deb" onclick="delItem('${proj.id}','${key}',${i})">✕</button>
+    </div></td></tr>`).join('');
+  c.innerHTML=`<div class="phd"><div><h1>${cfg.t}</h1><p>${cfg.d}</p></div></div>
+  <div class="tw"><table>
+    <thead><tr>${cfg.cols.map(h=>`<th>${h}</th>`).join('')}<th>Azioni</th></tr></thead>
+    <tbody>${rows||`<tr><td colspan="${cfg.cols.length+1}" style="text-align:center;padding:26px;color:var(--tl);font-style:italic">Nessun elemento. Clicca "＋ Aggiungi ${cfg.a}" per iniziare.</td></tr>`}</tbody>
+  </table></div>`;
+}
+
+// FIX: delItem usa il registro callback — nessuna closure serializzata
+function delItem(pid,key,idx){
+  cdel('Eliminare questo elemento?',()=>{
+    const proj=wsProjects().find(p=>p.id===pid);
+    if(proj&&proj[key])proj[key].splice(idx,1);
+    save();rContent();toast('Eliminato','🗑');
+  });
+}
+
+function openIM(pid,key,idx){
+  const proj=wsProjects().find(p=>p.id===pid);
+  const isN=idx===-1;const item=isN?{}:{...proj[key][idx]};
+  const mid='im'+Date.now();
+  const fhtml=window['f_'+key](item,proj);
+  $('modals').insertAdjacentHTML('beforeend',`<div class="mo" id="${mid}"><div class="modal mlg">
+    <div class="mhd"><h2>${isN?'Aggiungi':'Modifica'} ${LCFG[key].a}</h2><button class="cx" onclick="cm('${mid}')">✕</button></div>
+    <div class="mbody">${fhtml}</div>
+    <div class="mft"><button class="btn btng" onclick="cm('${mid}')">Annulla</button><button class="btn btnp" onclick="saveItem('${pid}','${key}',${idx},'${mid}')">Salva</button></div>
+  </div></div>`);
+}
+function saveItem(pid,key,idx,mid){
+  const proj=wsProjects().find(p=>p.id===pid);if(!proj[key])proj[key]=[];
+  const item=window['c_'+key]();
+  if(idx===-1){
+    const pre={wbs:'W',schedule:'T',risks:'R',issues:'I',changes:'CR',stakeholders:'S',lessons:'LL'}[key]||'X';
+    item.id=item.id||`${pre}${(proj[key].length+1).toString().padStart(3,'0')}`;
+    proj[key].push(item);
+  }else{proj[key][idx]=item;}
+  save();cm(mid);rContent();toast('Salvato ✓');
+}
+
+// ── FORM BUILDERS ──
+const fi2=(id,l,v='',t='text')=>`<div class="field"><label>${l}</label><input type="${t}" id="${id}" value="${(v||'').toString().replace(/"/g,'&quot;')}"/></div>`;
+const ta2=(id,l,v='')=>`<div class="field"><label>${l}</label><textarea id="${id}">${v||''}</textarea></div>`;
+const sel2=(id,l,opts,v='')=>`<div class="field"><label>${l}</label><select id="${id}">${opts.map(o=>`<option value="${o}" ${v===o?'selected':''}>${o||'—'}</option>`).join('')}</select></div>`;
+
+window.f_wbs=(r)=>`<div class="fg fg2">${fi2('fc','Codice WBS',r.code)}${sel2('fl','Livello',['','1','2','3'],r.level)}<div class="field" style="grid-column:1/-1"><label>DESCRIZIONE ATTIVITÀ</label><input type="text" id="fd" value="${(r.description||'').replace(/"/g,'&quot;')}"/></div>${fi2('fo','Responsabile',r.owner)}${fi2('fes','Effort Stimato (gg)',r.estimatedDays,'number')}${fi2('fea','Effort Effettivo (gg)',r.actualDays,'number')}${fi2('fcp','Completamento %',r.completion,'number')}${ta2('fn','Note / Deliverable',r.note)}</div>`;
+window.c_wbs=()=>({code:gv('fc'),level:gv('fl'),description:gv('fd'),owner:gv('fo'),estimatedDays:gv('fes'),actualDays:gv('fea'),completion:gv('fcp'),note:gv('fn')});
+
+window.f_schedule=(r)=>`<div class="fg fg2">${fi2('fid','ID',r.id)}${fi2('fwr','WBS Ref',r.wbsRef)}<div class="field" style="grid-column:1/-1"><label>NOME ATTIVITÀ</label><input type="text" id="fnm" value="${(r.name||'').replace(/"/g,'&quot;')}"/></div>${fi2('fo','Responsabile',r.owner)}${fi2('fst','Data Inizio',r.start,'date')}${fi2('fen','Data Fine',r.end,'date')}${fi2('fcp','% Completamento',r.completion,'number')}${sel2('fss','Stato',['','In Attesa','In Corso','Completata','Rinviata','Bloccata'],r.status)}${sel2('fml','Milestone?',['','Sì','No'],r.milestone?'Sì':'No')}${ta2('fno','Note',r.note)}</div>`;
+window.c_schedule=()=>({id:gv('fid'),name:gv('fnm'),wbsRef:gv('fwr'),owner:gv('fo'),start:gv('fst'),end:gv('fen'),completion:gv('fcp'),status:gv('fss'),milestone:gv('fml')==='Sì',note:gv('fno')});
+
+window.f_risks=(r)=>`<div class="fg fg2">${fi2('fid','ID',r.id)}${fi2('fdt','Data',r.date,'date')}${sel2('fca','Categoria',['','Tecnico','Organizzativo','Finanziario','Legale','Qualità','Risorse','Esterno'],r.category)}<div class="field" style="grid-column:1/-1"><label>DESCRIZIONE RISCHIO</label><textarea id="fde">${r.description||''}</textarea></div>${sel2('fpr','Probabilità (1-3)',['','1','2','3'],r.prob)}${sel2('fim','Impatto (1-3)',['','1','2','3'],r.impact)}${sel2('fre','Risposta',['','Evitare','Mitigare','Trasferire','Accettare'],r.response)}${fi2('fow','Risk Owner',r.owner)}${sel2('fst','Stato',['','Identificato','In Monitoraggio','Mitigato','Accettato','Chiuso'],r.status)}${ta2('fno','Piano Contingenza / Note',r.note)}</div>`;
+window.c_risks=()=>({id:gv('fid'),date:gv('fdt'),category:gv('fca'),description:gv('fde'),prob:gv('fpr'),impact:gv('fim'),response:gv('fre'),owner:gv('fow'),status:gv('fst'),note:gv('fno')});
+
+window.f_issues=(r)=>`<div class="fg fg2">${fi2('fid','ID',r.id)}${fi2('fop','Data Apertura',r.opened,'date')}${sel2('fpr','Priorità',['','Alta','Media','Bassa'],r.priority)}${sel2('fca','Categoria',['','Tecnico','Organizzativo','Qualità','Comunicazione','Risorse','Esterno'],r.category)}<div class="field" style="grid-column:1/-1"><label>DESCRIZIONE ISSUE</label><textarea id="fde">${r.description||''}</textarea></div>${fi2('fow','Owner',r.owner)}${fi2('ftg','Data Target',r.target,'date')}${fi2('fcl','Data Chiusura',r.closed,'date')}${sel2('fst','Stato',['','Aperta','In Corso','Risolta','Chiusa'],r.status)}<div class="field" style="grid-column:1/-1"><label>AZIONI INTRAPRESE</label><textarea id="fac">${r.actions||''}</textarea></div></div>`;
+window.c_issues=()=>({id:gv('fid'),opened:gv('fop'),priority:gv('fpr'),category:gv('fca'),description:gv('fde'),owner:gv('fow'),target:gv('ftg'),closed:gv('fcl'),status:gv('fst'),actions:gv('fac')});
+
+window.f_changes=(r)=>`<div class="fg fg2">${fi2('fid','ID',r.id)}${fi2('fdt','Data Richiesta',r.date,'date')}${fi2('frq','Richiedente',r.requestor)}<div class="field" style="grid-column:1/-1"><label>DESCRIZIONE MODIFICA</label><textarea id="fde">${r.description||''}</textarea></div>${ta2('fis','Impatto su Scope',r.impactScope)}${fi2('fisc','Impatto Schedule (gg)',r.impactSchedule,'number')}${fi2('fib','Impatto Budget (€)',r.impactBudget,'number')}${sel2('fpr','Priorità',['','Alta','Media','Bassa'],r.priority)}${sel2('fst','Stato',['','In Valutazione','Approvata','Rifiutata','Implementata'],r.status)}${fi2('fab','Approvato Da',r.approvedBy)}${ta2('fno','Note',r.note)}</div>`;
+window.c_changes=()=>({id:gv('fid'),date:gv('fdt'),requestor:gv('frq'),description:gv('fde'),impactScope:gv('fis'),impactSchedule:gv('fisc'),impactBudget:gv('fib'),priority:gv('fpr'),status:gv('fst'),approvedBy:gv('fab'),note:gv('fno')});
+
+window.f_stakeholders=(r)=>`<div class="fg fg2">${fi2('fid','ID',r.id)}${fi2('fnm','Nome',r.name)}${fi2('fro','Ruolo / Organizzazione',r.role)}${fi2('fco','Contatto',r.contact)}${sel2('fin','Interesse (1-5)',['','1','2','3','4','5'],r.interest)}${sel2('fif','Influenza (1-5)',['','1','2','3','4','5'],r.influence)}${sel2('fat','Atteggiamento',['','Sostenitore','Neutro','Resistente','Incerto'],r.attitude)}${sel2('fcf','Freq. Comunicazione',['','Giornaliera','Settimanale','Bisettimanale','Mensile','Al bisogno'],r.commFreq)}${ta2('fex','Aspettative',r.expectations)}${ta2('fst','Strategia di Engagement',r.strategy)}${ta2('fno','Note',r.note)}</div>`;
+window.c_stakeholders=()=>({id:gv('fid'),name:gv('fnm'),role:gv('fro'),contact:gv('fco'),interest:gv('fin'),influence:gv('fif'),attitude:gv('fat'),commFreq:gv('fcf'),expectations:gv('fex'),strategy:gv('fst'),note:gv('fno')});
+
+window.f_lessons=(r)=>`<div class="fg fg2">${fi2('fid','ID',r.id)}${fi2('fdt','Data',r.date,'date')}${fi2('fph','Fase Progetto',r.phase)}${sel2('fca','Categoria',['','Tecnica','Organizzativa','Comunicazione','Gestione Rischi','Pianificazione','Qualità','Risorse'],r.category)}<div class="field" style="grid-column:1/-1"><label>DESCRIZIONE SITUAZIONE</label><textarea id="fsi">${r.situation||''}</textarea></div>${ta2('fpo','✅ Cosa ha funzionato',r.positive)}${ta2('fne','❌ Cosa non ha funzionato',r.negative)}<div class="field" style="grid-column:1/-1"><label>RACCOMANDAZIONE</label><textarea id="frc">${r.recommendation||''}</textarea></div>${sel2('fpr','Priorità',['','Alta','Media','Bassa'],r.priority)}${fi2('fow','Owner',r.owner)}</div>`;
+window.c_lessons=()=>({id:gv('fid'),date:gv('fdt'),phase:gv('fph'),category:gv('fca'),situation:gv('fsi'),positive:gv('fpo'),negative:gv('fne'),recommendation:gv('frc'),priority:gv('fpr'),owner:gv('fow')});
+
+// ═══════════════════ RACI ════════════════════════════════════════════════════
+function rRaci(proj,c,tb){
+  const raci=proj.raci||{roles:[],activities:[]};
+  tb.innerHTML=`<button class="btn btng bsm" onclick="editRaciRoles('${proj.id}')">⚙ Ruoli</button><button class="btn btnp bsm" onclick="addRaciAct('${proj.id}')">＋ Aggiungi Attività</button>`;
+  const legend=`<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">${[['R','#d97706','Responsible'],['A','#dc2626','Accountable'],['C','#2563eb','Consulted'],['I','#16a34a','Informed']].map(([l,col,desc])=>`<div style="display:flex;align-items:center;gap:7px;font-size:12.5px"><span style="width:22px;height:22px;background:${col};color:#fff;border-radius:5px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px">${l}</span><span style="color:var(--tm)"><b>${l}</b> = ${desc}</span></div>`).join('')}</div>`;
+  if(!(raci.activities||[]).length){
+    c.innerHTML=`<div class="phd"><div><h1>RACI Matrix</h1><p>Matrice di responsabilità</p></div></div>${legend}<div class="empty"><div class="empty-icon">👥</div><p>Aggiungi prima i ruoli (⚙ Ruoli), poi le attività.</p></div>`;return;
+  }
+  const vs={R:'background:#ffedd5;color:#c2410c',A:'background:#fee2e2;color:#b91c1c',C:'background:#dbeafe;color:#1d4ed8',I:'background:#dcfce7;color:#15803d'};
+  c.innerHTML=`<div class="phd"><div><h1>RACI Matrix</h1><p>Matrice di responsabilità del progetto</p></div></div>${legend}
+  <div class="tw"><table>
+    <thead><tr><th>Attività / Deliverable</th>${(raci.roles||[]).map(r=>`<th>${r}</th>`).join('')}<th></th></tr></thead>
+    <tbody>${(raci.activities||[]).map((act,i)=>`<tr>
+      <td style="font-weight:600">${act.name||'—'}</td>
+      ${(raci.roles||[]).map(r=>{const v=act.values?.[r]||'';return`<td style="text-align:center">${v?`<span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:5px;font-size:12px;font-weight:700;${vs[v]||''}">${v}</span>`:'<span style="color:var(--tl)">—</span>'}</td>`;}).join('')}
+      <td><div class="ac"><button class="reb" onclick="editRaciAct('${proj.id}',${i})">Modifica</button><button class="deb" onclick="delRaciAct('${proj.id}',${i})">✕</button></div></td>
+    </tr>`).join('')}</tbody>
+  </table></div>`;
+}
+function editRaciRoles(pid){
+  const proj=wsProjects().find(p=>p.id===pid);if(!proj.raci)proj.raci={roles:[],activities:[]};
+  const mid='mrr';
+  $('modals').insertAdjacentHTML('beforeend',`<div class="mo" id="${mid}"><div class="modal mmd">
+    <div class="mhd"><h2>⚙ Gestisci Ruoli RACI</h2><button class="cx" onclick="cm('${mid}')">✕</button></div>
+    <div class="mbody">
+      <div id="rrl">${proj.raci.roles.map((r,i)=>`<div style="display:flex;gap:8px;margin-bottom:8px"><input type="text" value="${r}" id="rr${i}" style="flex:1"/><button class="btn btng bsm" onclick="this.parentElement.remove()">✕</button></div>`).join('')}</div>
+      <button class="btn btng bsm" onclick="addRRI()" style="margin-top:8px">＋ Aggiungi Ruolo</button>
+    </div>
+    <div class="mft"><button class="btn btng" onclick="cm('${mid}')">Annulla</button><button class="btn btnp" onclick="saveRR('${pid}','${mid}')">Salva</button></div>
+  </div></div>`);
+}
+function addRRI(){const d=document.createElement('div');d.style.cssText='display:flex;gap:8px;margin-bottom:8px';d.innerHTML=`<input type="text" style="flex:1" placeholder="Nome ruolo"/><button class="btn btng bsm" onclick="this.parentElement.remove()">✕</button>`;$('rrl').appendChild(d);}
+function saveRR(pid,mid){
+  const proj=wsProjects().find(p=>p.id===pid);const roles=[];
+  $('rrl').querySelectorAll('input[type=text]').forEach(i=>{if(i.value.trim())roles.push(i.value.trim());});
+  proj.raci.roles=roles;save();cm(mid);rContent();toast('Ruoli aggiornati');
+}
+function addRaciAct(pid){
+  const proj=wsProjects().find(p=>p.id===pid);
+  if(!proj.raci)proj.raci={roles:[],activities:[]};
+  if(!proj.raci.roles.length){alert('Aggiungi prima i ruoli (⚙ Ruoli).');return;}
+  editRaciAct(pid,-1);
+}
+function editRaciAct(pid,idx){
+  const proj=wsProjects().find(p=>p.id===pid);const isN=idx===-1;
+  const act=isN?{name:'',values:{}}:{...proj.raci.activities[idx],values:{...proj.raci.activities[idx].values}};
+  const mid='mra';const vo=role=>['','R','A','C','I'].map(v=>`<option value="${v}" ${(act.values[role]||'')===v?'selected':''}>${v||'—'}</option>`).join('');
+  $('modals').insertAdjacentHTML('beforeend',`<div class="mo" id="${mid}"><div class="modal mmd">
+    <div class="mhd"><h2>${isN?'Aggiungi':'Modifica'} Attività RACI</h2><button class="cx" onclick="cm('${mid}')">✕</button></div>
+    <div class="mbody">
+      <div class="field" style="margin-bottom:16px"><label>Nome Attività</label><input type="text" id="ran" value="${(act.name||'').replace(/"/g,'&quot;')}"/></div>
+      <div class="fg fg2">${proj.raci.roles.map(r=>`<div class="field"><label>${r}</label><select id="rv_${r.replace(/\s+/g,'_')}">${vo(r)}</select></div>`).join('')}</div>
+    </div>
+    <div class="mft"><button class="btn btng" onclick="cm('${mid}')">Annulla</button><button class="btn btnp" onclick="saveRaciAct('${pid}',${idx},'${mid}')">Salva</button></div>
+  </div></div>`);
+}
+function saveRaciAct(pid,idx,mid){
+  const proj=wsProjects().find(p=>p.id===pid);const values={};
+  proj.raci.roles.forEach(r=>{values[r]=document.getElementById('rv_'+r.replace(/\s+/g,'_'))?.value||'';});
+  const act={name:gv('ran'),values};
+  if(idx===-1)proj.raci.activities.push(act);else proj.raci.activities[idx]=act;
+  save();cm(mid);rContent();toast('Attività RACI salvata');
+}
+function delRaciAct(pid,idx){
+  cdel('Eliminare questa attività dalla RACI?',()=>{
+    wsProjects().find(p=>p.id===pid).raci.activities.splice(idx,1);
+    save();rContent();toast('Eliminato','🗑');
+  });
+}
+
+// ═══════════════════ BUDGET & EVM ════════════════════════════════════════════
+function rBudget(proj,c,tb){
+  const items=proj.budget||[];
+  tb.innerHTML=`<button class="btn btnp bsm" onclick="openBM('${proj.id}',-1)">＋ Aggiungi Voce</button>`;
+  const tPV=items.reduce((s,r)=>s+(parseFloat(r.pv)||0),0);
+  const tEV=items.reduce((s,r)=>s+(parseFloat(r.ev)||0),0);
+  const tAC=items.reduce((s,r)=>s+(parseFloat(r.ac)||0),0);
+  const tB=items.reduce((s,r)=>s+(parseFloat(r.budget)||0),0);
+  const cpi=tAC?tEV/tAC:null,spi=tPV?tEV/tPV:null,cv=tEV-tAC,sv=tEV-tPV;
+  const kc=v=>v===null?'var(--tm)':v>=1?'var(--gn)':v>=0.8?'var(--wn)':'var(--dn)';
+  const eur=v=>(v===null||isNaN(v))?'—':'€'+parseFloat(v).toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const idx2=v=>v===null?'—':v.toFixed(2);
+  const rows=items.map((r,i)=>{
+    const pv=parseFloat(r.pv)||0,ev=parseFloat(r.ev)||0,ac=parseFloat(r.ac)||0;
+    const rcpi=ac?ev/ac:null,rspi=pv?ev/pv:null,rcv=ev-ac,rsv=ev-pv;
+    const sc=v=>v===null?'':v>=1?'color:var(--gn);font-weight:700':'color:var(--dn);font-weight:700';
+    return`<tr>
+      <td style="font-weight:600">${r.wbs||'—'}</td><td>${r.owner||'—'}</td>
+      <td>${eur(r.budget)}</td><td>${eur(pv)}</td><td>${eur(ev)}</td><td>${eur(ac)}</td>
+      <td style="${rcv>=0?'color:var(--gn);font-weight:600':'color:var(--dn);font-weight:600'}">${eur(rcv)}</td>
+      <td style="${rsv>=0?'color:var(--gn);font-weight:600':'color:var(--dn);font-weight:600'}">${eur(rsv)}</td>
+      <td style="${sc(rcpi)}">${idx2(rcpi)}</td><td style="${sc(rspi)}">${idx2(rspi)}</td>
+      <td>${r.completion?r.completion+'%':'—'}</td>
+      <td><div class="ac"><button class="reb" onclick="openBM('${proj.id}',${i})">Modifica</button><button class="deb" onclick="delBI('${proj.id}',${i})">✕</button></div></td></tr>`;}).join('');
+  c.innerHTML=`<div class="phd"><div><h1>Budget & EVM</h1><p>Earned Value Management · PV / EV / AC · CPI / SPI</p></div></div>
+  <div class="kgrid" style="grid-template-columns:repeat(auto-fill,minmax(140px,1fr))">
+    <div class="kcard"><div class="klabel">Budget Approvato</div><div class="kval" style="font-size:15px;margin-top:4px">${eur(tB)}</div></div>
+    <div class="kcard"><div class="klabel">PV – Planned</div><div class="kval" style="font-size:15px;margin-top:4px">${eur(tPV)}</div></div>
+    <div class="kcard"><div class="klabel">EV – Earned</div><div class="kval" style="font-size:15px;margin-top:4px">${eur(tEV)}</div></div>
+    <div class="kcard"><div class="klabel">AC – Actual</div><div class="kval" style="font-size:15px;margin-top:4px">${eur(tAC)}</div></div>
+    <div class="kcard"><div class="klabel">CV = EV − AC</div><div class="kval" style="font-size:17px;color:${cv>=0?'var(--gn)':'var(--dn)'};margin-top:4px">${eur(cv)}</div><div class="ksub">${cv>=0?'⬇ Sotto budget':'⬆ Over budget'}</div></div>
+    <div class="kcard"><div class="klabel">SV = EV − PV</div><div class="kval" style="font-size:17px;color:${sv>=0?'var(--gn)':'var(--dn)'};margin-top:4px">${eur(sv)}</div><div class="ksub">${sv>=0?'⬆ In anticipo':'⬇ In ritardo'}</div></div>
+    <div class="kcard"><div class="klabel">CPI = EV / AC</div><div class="kval" style="color:${kc(cpi)};margin-top:4px">${idx2(cpi)}</div><div class="ksub">Target ≥ 1.0</div></div>
+    <div class="kcard"><div class="klabel">SPI = EV / PV</div><div class="kval" style="color:${kc(spi)};margin-top:4px">${idx2(spi)}</div><div class="ksub">Target ≥ 1.0</div></div>
+  </div>
+  <div class="tw"><table>
+    <thead><tr><th>WBS / Fase</th><th>Responsabile</th><th>Budget</th><th>PV</th><th>EV</th><th>AC</th><th>CV</th><th>SV</th><th>CPI</th><th>SPI</th><th>% Compl.</th><th>Azioni</th></tr></thead>
+    <tbody>${rows||`<tr><td colspan="12" style="text-align:center;padding:24px;color:var(--tl);font-style:italic">Nessuna voce. Clicca "＋ Aggiungi Voce".</td></tr>`}</tbody>
+  </table></div>`;
+}
+function openBM(pid,idx){
+  const proj=wsProjects().find(p=>p.id===pid);const isN=idx===-1;const r=isN?{}:proj.budget[idx];const mid='mbm';
+  $('modals').insertAdjacentHTML('beforeend',`<div class="mo" id="${mid}"><div class="modal mlg">
+    <div class="mhd"><h2>${isN?'Aggiungi':'Modifica'} Voce Budget</h2><button class="cx" onclick="cm('${mid}')">✕</button></div>
+    <div class="mbody"><div class="fg fg2">
+      ${fi2('bw','WBS / Fase',r.wbs)}${fi2('bo','Responsabile',r.owner)}
+      ${fi2('bb','Budget Approvato (€)',r.budget,'number')}${fi2('bcp','% Completamento',r.completion,'number')}
+      ${fi2('bpv','PV – Planned Value (€)',r.pv,'number')}${fi2('bev','EV – Earned Value (€)',r.ev,'number')}
+      ${fi2('bac','AC – Actual Cost (€)',r.ac,'number')}${ta2('bno','Note',r.note)}
+    </div>
+    <div style="margin-top:12px;padding:12px;background:var(--b0);border-radius:var(--rs);border:1px solid var(--b2);font-size:12px;color:var(--tm)">
+      <b style="color:var(--acc)">Formule EVM (auto):</b> CV = EV − AC · SV = EV − PV · CPI = EV / AC · SPI = EV / PV
+    </div></div>
+    <div class="mft"><button class="btn btng" onclick="cm('${mid}')">Annulla</button><button class="btn btnp" onclick="saveBI('${pid}',${idx},'${mid}')">Salva</button></div>
+  </div></div>`);
+}
+function saveBI(pid,idx,mid){
+  const proj=wsProjects().find(p=>p.id===pid);if(!proj.budget)proj.budget=[];
+  const item={wbs:gv('bw'),owner:gv('bo'),budget:gv('bb'),pv:gv('bpv'),ev:gv('bev'),ac:gv('bac'),completion:gv('bcp'),note:gv('bno')};
+  if(idx===-1)proj.budget.push(item);else proj.budget[idx]=item;
+  save();cm(mid);rContent();toast('Voce budget salvata');
+}
+function delBI(pid,idx){
+  cdel('Eliminare questa voce budget?',()=>{
+    wsProjects().find(p=>p.id===pid).budget.splice(idx,1);
+    save();rContent();toast('Eliminato','🗑');
+  });
+}
+
+// ═══════════════════ IMPORT / EXPORT ═════════════════════════════════════════
+function showImpExp(){
+  S.activeProj=null;rSidebar();rSecNav();rTopbar();$('tb-actions').innerHTML='';
+  $('content').innerHTML=`<div class="phd"><div><h1>Import / Export</h1><p>Backup, ripristino e importazione da Excel</p></div></div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px">
+    <div class="card"><div class="banner"><h3>📊 Importa da Excel</h3></div>
+      <div style="padding:18px">
+        <p style="color:var(--tm);font-size:13px;margin-bottom:12px">Carica il file <b>PM_Import_Template.xlsx</b> compilato. I dati vengono mappati automaticamente sulle sezioni del progetto scelto.</p>
+        <div style="background:var(--b0);border:1px solid var(--b2);border-radius:var(--rs);padding:10px 14px;font-size:12px;color:var(--tm);margin-bottom:14px">
+          <b style="color:var(--acc)">Come funziona:</b><br>
+          1. Clicca il pulsante qui sotto<br>
+          2. Scegli workspace e progetto di destinazione<br>
+          3. Seleziona il file Excel dal tuo computer<br>
+          4. I dati vengono importati automaticamente
+        </div>
+        <button class="btn btnp" onclick="triggerXlsxImport()">📊 Importa da Excel…</button>
+      </div>
+    </div>
+
+    <div class="card"><div class="banner"><h3>📋 Scarica Template Excel</h3></div>
+      <div style="padding:18px">
+        <p style="color:var(--tm);font-size:13px;margin-bottom:8px">Scarica il template Excel preformattato con tutti i fogli (Dashboard, Charter, WBS, Schedule, RACI, Risk Register…).</p>
+        <div style="background:var(--b0);border:1px solid var(--b2);border-radius:var(--rs);padding:10px 14px;font-size:12px;color:var(--tm);margin-bottom:14px">
+          <b style="color:var(--acc)">Fogli inclusi:</b> Dashboard · Charter · WBS · Schedule · RACI · Risk Register · Issue Log · Budget EVM · Change Log · Stakeholders · Lessons Learned
+        </div>
+        <a id="dl-template-link" class="btn btng" style="text-decoration:none">⬇ Scarica PM_Import_Template.xlsx</a>
+        <p style="font-size:11px;color:var(--tl);margin-top:8px">Il file sarà disponibile dopo aver scaricato l'app.</p>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px">
+    <div class="card"><div class="banner"><h3>⬇ Esporta backup JSON</h3></div>
+      <div style="padding:18px"><p style="color:var(--tm);font-size:13.5px;margin-bottom:14px">Scarica un file JSON con tutti i workspace e i progetti come backup.</p>
+      <button class="btn btnp" onclick="expAll()">⬇ Scarica JSON</button></div></div>
+    <div class="card"><div class="banner"><h3>⬆ Importa backup JSON</h3></div>
+      <div style="padding:18px"><p style="color:var(--tm);font-size:13.5px;margin-bottom:14px">Ripristina da un file JSON esportato precedentemente.</p>
+      <div class="idrop" onclick="$('impf').click()"><div style="font-size:24px;margin-bottom:5px">📂</div><div style="font-weight:500;font-size:13px">Clicca per selezionare .json</div></div>
+      <input type="file" id="impf" accept=".json" style="display:none" onchange="impJ(this)"/></div></div>
+  </div>
+
+  <div class="card"><div class="banner" style="background:linear-gradient(90deg,#7f1d1d,#b91c1c)"><h3>⚠ Zona Pericolosa</h3></div>
+    <div style="padding:18px;display:flex;align-items:center;gap:16px"><p style="flex:1;color:var(--tm);font-size:13.5px">Elimina tutti i workspace e i dati salvati nel browser. Irreversibile.</p>
+    <button class="btn btnd" onclick="clrAll()">🗑 Cancella Tutto</button></div></div>`;
+}
+
+function triggerXlsxImport(){
+  // Apre sempre il modal di selezione progetto — non richiede pre-selezione dalla sidebar
+  const mid='mxlpick';
+  const wsOpts=S.workspaces.map(w=>`<option value="${w.id}">${w.icon} ${w.name}</option>`).join('');
+  if(!S.workspaces.length){
+    toast('Crea prima un Workspace e un Progetto','⚠');return;
+  }
+  // Prende il primo ws con almeno un progetto, oppure il primo ws
+  const defaultWs=S.workspaces.find(w=>w.projects.length)||S.workspaces[0];
+  const projOpts=(ws)=>ws.projects.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+  const hasProjDefault=defaultWs.projects.length>0;
+
+  $('modals').insertAdjacentHTML('beforeend',`<div class="mo" id="${mid}">
+    <div class="modal mmd">
+      <div class="mhd"><h2>📊 Importa file Excel</h2><button class="cx" onclick="cm('${mid}')">✕</button></div>
+      <div class="mbody">
+        <p style="font-size:13.5px;color:var(--tm);margin-bottom:18px">Scegli il progetto di destinazione. I dati del file Excel sovrascriveranno le sezioni corrispondenti.</p>
+        <div class="fg fg2" style="margin-bottom:16px">
+          <div class="field">
+            <label>Workspace</label>
+            <select id="xlpick_ws" onchange="xlPickWsChanged(this.value,'${mid}')">${wsOpts}</select>
+          </div>
+          <div class="field">
+            <label>Progetto</label>
+            <select id="xlpick_proj">${hasProjDefault?projOpts(defaultWs):'<option value="">— nessun progetto —</option>'}</select>
+          </div>
+        </div>
+        <div style="background:var(--b0);border:1px solid var(--b2);border-radius:var(--rs);padding:12px 14px;font-size:12px;color:var(--tm)">
+          <b style="color:var(--acc)">Nota:</b> Non rinominare i fogli del file Excel. I nomi attesi sono:
+          Dashboard, Charter, WBS, Schedule, RACI, Risk_Register, Issue_Log, Budget_EVM, Change_Log, Stakeholders, Lessons_Learned.
+        </div>
+      </div>
+      <div class="mft">
+        <button class="btn btng" onclick="cm('${mid}')">Annulla</button>
+        <button class="btn btnp" onclick="xlPickConfirm('${mid}')">Scegli file Excel…</button>
+      </div>
+    </div></div>`);
+  // Pre-select active ws/proj if set
+  if(S.activeWs){
+    const sel=$('xlpick_ws');
+    if(sel){sel.value=S.activeWs;xlPickWsChanged(S.activeWs,mid,true);}
+  }
+}
+
+function xlPickWsChanged(wsId, mid, preserveProj){
+  const ws=S.workspaces.find(w=>w.id===wsId);
+  const sel=$('xlpick_proj');
+  if(!sel||!ws)return;
+  sel.innerHTML=ws.projects.length
+    ?ws.projects.map(p=>`<option value="${p.id}">${p.name}</option>`).join('')
+    :'<option value="">— nessun progetto —</option>';
+  if(preserveProj&&S.activeProj){sel.value=S.activeProj;}
+}
+
+function xlPickConfirm(mid){
+  const wsId=$('xlpick_ws')?.value;
+  const projId=$('xlpick_proj')?.value;
+  if(!wsId||!projId){toast('Seleziona workspace e progetto','⚠');return;}
+  // Salva la selezione nel state temporaneamente
+  _xlTargetWs=wsId;
+  _xlTargetProj=projId;
+  cm(mid);
+  // Apri file picker
+  const inp=document.createElement('input');
+  inp.type='file';inp.accept='.xlsx,.xls';
+  inp.style.display='none';
+  inp.onchange=()=>handleXlsxImport(inp);
+  document.body.appendChild(inp);
+  inp.click();
+  setTimeout(()=>inp.remove(),30000);
+}
+let _xlTargetWs=null,_xlTargetProj=null;
+
+// ── Mappa nomi colonne Excel → chiavi app ──────────────────────────────────
+const XL_MAP = {
+  // WBS
+  wbs: {id:'id',code:'code',description:'description',level:'level',owner:'owner',
+    'effort stimato (gg)':'estimatedDays','effort effettivo (gg)':'actualDays',
+    'completamento %':'completion',stimato:'estimatedDays',effettivo:'actualDays',
+    'avanzamento':'completion',note:'note'},
+  // Schedule
+  schedule: {id:'id',name:'name','nome attività':'name',wbsref:'wbsRef','wbs ref':'wbsRef',
+    owner:'owner',responsabile:'owner','data inizio':'start','data fine':'end',start:'start',end:'end',
+    '% compl.':'completion','% completamento':'completion',stato:'status',milestone:'milestone',note:'note'},
+  // Risks
+  risks: {id:'id',data:'date','categoria':'category',descrizione:'description',
+    'descrizione rischio':'description','probabilità\n(1-3)':'prob','probabilità':'prob',prob:'prob',
+    'impatto\n(1-3)':'impact',impatto:'impact',impact:'impact',score:'score',risposta:'response',
+    'risk owner':'owner',owner:'owner',stato:'status','note / piano contingenza':'note',note:'note'},
+  // Issues
+  issues: {id:'id','data apertura':'opened',priorità:'priority','categoria':'category',
+    'descrizione issue':'description',descrizione:'description',owner:'owner','data target':'target',
+    'data chiusura':'closed',stato:'status','azioni intraprese':'actions'},
+  // Budget EVM
+  budget: {id:'id','wbs / fase':'wbs',wbs:'wbs',responsabile:'owner',owner:'owner',
+    'budget approvato (€)':'budget','budget':'budget','pv — planned value (€)':'pv',
+    'pv - planned value (€)':'pv',pv:'pv','ev — earned value (€)':'ev',
+    'ev - earned value (€)':'ev',ev:'ev','ac — actual cost (€)':'ac',
+    'ac - actual cost (€)':'ac',ac:'ac','% completamento':'completion',note:'note'},
+  // Changes
+  changes: {id:'id',data:'date',richiedente:'requestor','descrizione modifica':'description',
+    descrizione:'description','impatto scope':'impactScope','δ schedule (gg)':'impactSchedule',
+    'δ budget (€)':'impactBudget',priorità:'priority',stato:'status',
+    'approvato da':'approvedBy',note:'note'},
+  // Stakeholders
+  stakeholders: {id:'id',nome:'name','ruolo / organizzazione':'role',ruolo:'role',
+    contatto:'contact','interesse\n(1-5)':'interest',interesse:'interest',
+    'influenza\n(1-5)':'influence',influenza:'influence',atteggiamento:'attitude',
+    'freq. comm.':'commFreq','freq. comunicazione':'commFreq',aspettative:'expectations',
+    'strategia engagement':'strategy','strategia di engagement':'strategy',note:'note'},
+  // Lessons
+  lessons: {id:'id',data:'date','fase progetto':'phase',fase:'phase',categoria:'category',
+    'descrizione situazione':'situation',situazione:'situation',
+    '✅ cosa ha funzionato':'positive','cosa ha funzionato':'positive',
+    '❌ cosa non ha funzionato':'negative','cosa non ha funzionato':'negative',
+    raccomandazione:'recommendation',priorità:'priority',owner:'owner'},
+};
+
+// Sheet name → key nelle sezioni lista
+const SHEET_TO_KEY = {
+  'wbs':'wbs','schedule':'schedule','risk_register':'risks','risks':'risks',
+  'issue_log':'issues','issues':'issues','budget_evm':'budget','budget':'budget',
+  'change_log':'changes','changes':'changes','stakeholders':'stakeholders','lessons_learned':'lessons','lessons':'lessons'
+};
+
+function parseXlsxDate(v){
+  if(!v)return '';
+  if(typeof v==='number'){
+    // Excel serial date
+    const d=new Date(Math.round((v-25569)*864e5));
+    return d.toISOString().slice(0,10);
+  }
+  if(typeof v==='string'){
+    // già formattata
+    const m=v.match(/(\d{4})-(\d{2})-(\d{2})/);
+    if(m)return m[0];
+    const m2=v.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+    if(m2)return `${m2[3]}-${m2[2].padStart(2,'0')}-${m2[1].padStart(2,'0')}`;
+  }
+  return String(v);
+}
+
+function xlRowToObj(headers, row, fieldMap){
+  const obj={};
+  headers.forEach((h,i)=>{
+    const key=fieldMap[(h||'').toString().toLowerCase().trim()];
+    if(key){
+      let v=row[i];
+      if(v===undefined||v===null)v='';
+      // date detection
+      if(['start','end','date','opened','target','closed','planned','actual'].includes(key)){
+        v=parseXlsxDate(v);
+      }else{
+        v=String(v).trim();
+        if(v==='0'&&['estimatedDays','actualDays','completion','pv','ev','ac','budget','impactSchedule','impactBudget'].includes(key))v='0';
+      }
+      obj[key]=v;
+    }
+  });
+  return obj;
+}
+
+function handleXlsxImport(input){
+  const f=input.files[0];if(!f)return;
+  // Usa il target scelto nel modal picker, oppure il progetto attivo come fallback
+  const targetWsId=_xlTargetWs||S.activeWs;
+  const targetProjId=_xlTargetProj||S.activeProj;
+  _xlTargetWs=null;_xlTargetProj=null;
+  const targetWs=S.workspaces.find(w=>w.id===targetWsId);
+  const proj=targetWs?.projects.find(p=>p.id===targetProjId);
+  if(!proj){toast('Progetto di destinazione non trovato','⚠');return;}
+
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:'array',cellDates:false});
+      let imported=0;
+      const log=[];
+
+      wb.SheetNames.forEach(shName=>{
+        const shKey=shName.toLowerCase().trim().replace(/\s+/g,'_');
+        const ws=wb.Sheets[shName];
+
+        // ── DASHBOARD ────────────────────────────────────────────────────────
+        if(shKey==='dashboard'){
+          const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+          // Info generali (Campo / Valore pairs)
+          const fieldMap={
+            'nome progetto':'projectName','project manager':'pm',pm:'pm',
+            'sponsor':'sponsor','fase attuale':'phase','fase':'phase',
+            'data inizio':'start','data fine':'end'
+          };
+          const dashInfo={};
+          rows.forEach(r=>{
+            const lbl=(r[0]||'').toString().toLowerCase().trim();
+            const val=(r[1]||'').toString().trim();
+            const mapped=fieldMap[lbl];
+            if(mapped&&val){
+              dashInfo[mapped]=['start','end'].includes(mapped)?parseXlsxDate(val===''?'':r[1]):val;
+            }
+          });
+          if(Object.keys(dashInfo).length){
+            Object.assign(proj.dashboard,dashInfo);
+            // sync charter project name
+            if(dashInfo.projectName){proj.name=dashInfo.projectName;proj.charter.projectName=dashInfo.projectName;}
+            if(dashInfo.pm)proj.charter.pm=dashInfo.pm;
+            if(dashInfo.sponsor)proj.charter.sponsor=dashInfo.sponsor;
+            imported++;log.push('Dashboard');
+          }
+
+          // Status RAG
+          const ragMap={scope:'scope',schedule:'schedule',budget:'budget','qualità':'quality',qualita:'quality',rischi:'risks'};
+          if(!proj.dashboard.rag)proj.dashboard.rag={};
+          rows.forEach(r=>{
+            const lbl=(r[0]||'').toString().toLowerCase().trim();
+            const val=(r[1]||'').toString().trim().toUpperCase();
+            const ragKey=ragMap[lbl];
+            if(ragKey&&['G','A','R'].includes(val)){
+              proj.dashboard.rag[ragKey]=val;
+            }
+          });
+
+          // Milestone: cerca header row con "name" o "nome milestone"
+          let mlHeaderIdx=-1;
+          rows.forEach((r,i)=>{
+            const first=(r[0]||'').toString().toLowerCase().trim();
+            if(first==='nome milestone'||first==='name'||first==='milestone')mlHeaderIdx=i;
+          });
+          if(mlHeaderIdx>=0){
+            const mlHeaders=rows[mlHeaderIdx].map(h=>(h||'').toString().toLowerCase().trim());
+            const mlFieldMap={'nome milestone':'name','name':'name','data pianificata':'planned','data effettiva':'actual','stato':'status','note':'note'};
+            const milestones=[];
+            for(let i=mlHeaderIdx+1;i<rows.length;i++){
+              const r=rows[i];
+              if(!r[0])continue;
+              const ml=xlRowToObj(mlHeaders,r,mlFieldMap);
+              if(ml.name)milestones.push(ml);
+            }
+            if(milestones.length){proj.dashboard.milestones=milestones;}
+          }
+        }
+
+        // ── CHARTER ──────────────────────────────────────────────────────────
+        else if(shKey==='charter'){
+          const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+          const charterMap={
+            'nome progetto':'projectName','codice':'code','project manager':'pm','sponsor':'sponsor',
+            'data inizio':'start','data fine prevista':'end','budget approvato (€)':'budget','budget approvato':'budget',
+            'obiettivo principale':'objective','obiettivi secondari':'secondaryObj','benefici attesi':'benefits',
+            'incluso nel progetto':'inScope','cosa è incluso':'inScope',
+            'escluso dal progetto':'outScope','cosa è escluso':'outScope',
+            'vincoli':'constraints','assunzioni':'assumptions','dipendenze esterne':'dependencies',
+            'stakeholder chiave':'stakeholders','rischi principali iniziali':'initialRisks','rischi iniziali':'initialRisks'
+          };
+          let found=0;
+          rows.forEach(r=>{
+            const lbl=(r[0]||'').toString().toLowerCase().trim();
+            const val=(r[1]||'').toString().trim();
+            const mapped=charterMap[lbl];
+            if(mapped&&val){
+              proj.charter[mapped]=['start','end'].includes(mapped)?parseXlsxDate(r[1]):val;
+              found++;
+            }
+          });
+          if(found){imported++;log.push('Charter');}
+        }
+
+        // ── RACI ──────────────────────────────────────────────────────────────
+        else if(shKey==='raci'){
+          const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+          // Header row = prima riga non vuota con almeno 2 colonne
+          let headerIdx=rows.findIndex(r=>r.filter(Boolean).length>=2);
+          if(headerIdx<0)return;
+          const headers=rows[headerIdx];
+          const activityCol=headers.findIndex(h=>h&&h.toString().toLowerCase().includes('attività')||h&&h.toString().toLowerCase().includes('deliverable'));
+          const roleStartCol=activityCol>=0?activityCol+1:1;
+          const roles=headers.slice(roleStartCol).map(h=>(h||'').toString().trim()).filter(Boolean);
+          if(!roles.length)return;
+          const activities=[];
+          for(let i=headerIdx+1;i<rows.length;i++){
+            const r=rows[i];
+            const actName=(r[activityCol>=0?activityCol:0]||'').toString().trim();
+            if(!actName)continue;
+            const values={};
+            roles.forEach((role,j)=>{
+              const v=(r[roleStartCol+j]||'').toString().trim().toUpperCase();
+              if(['R','A','C','I'].includes(v))values[role]=v;
+            });
+            activities.push({name:actName,values});
+          }
+          if(activities.length){proj.raci={roles,activities};imported++;log.push('RACI');}
+        }
+
+        // ── SEZIONI LISTA ─────────────────────────────────────────────────────
+        else{
+          const listKey=SHEET_TO_KEY[shKey];
+          if(!listKey)return;
+          const fieldMap=XL_MAP[listKey];if(!fieldMap)return;
+          const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+          // trova header row: prima riga con almeno 3 colonne non vuote
+          const headerIdx=rows.findIndex(r=>r.filter(Boolean).length>=3);
+          if(headerIdx<0)return;
+          const headers=rows[headerIdx].map(h=>(h||'').toString().toLowerCase().trim());
+          const items=[];
+          const prefixMap={wbs:'W',schedule:'T',risks:'R',issues:'I',changes:'CR',stakeholders:'S',lessons:'LL',budget:'B'};
+          let autoIdx=1;
+          for(let i=headerIdx+1;i<rows.length;i++){
+            const r=rows[i];
+            if(!r.some(Boolean))continue; // skip empty rows
+            const obj=xlRowToObj(headers,r,fieldMap);
+            if(!Object.values(obj).some(v=>v!==''))continue;
+            if(!obj.id){obj.id=`${prefixMap[listKey]||'X'}${String(autoIdx).padStart(3,'0')}`;}
+            // milestone bool
+            if(listKey==='schedule'&&obj.milestone!==undefined){
+              obj.milestone=String(obj.milestone).toLowerCase()==='sì'||String(obj.milestone).toLowerCase()==='si'||obj.milestone===true;
+            }
+            items.push(obj);autoIdx++;
+          }
+          if(items.length){proj[listKey]=items;imported++;log.push(shName);}
+        }
+      });
+
+      save();rWsSel();rSidebar();rSecNav();rTopbar();rContent();
+
+      if(imported>0){
+        toast(`✓ Importati ${imported} fogli: ${log.join(', ')}`,'📊');
+        // Mostra report
+        const mid='mxlok';
+        $('modals').insertAdjacentHTML('beforeend',`<div class="mo" id="${mid}"><div class="modal mmd">
+          <div class="mhd"><h2>📊 Import Excel completato</h2><button class="cx" onclick="cm('${mid}')">✕</button></div>
+          <div class="mbody">
+            <p style="font-size:14px;color:var(--tm);margin-bottom:16px">I dati del file Excel sono stati importati nel progetto <b>${proj.name}</b>.</p>
+            <div style="background:var(--b0);border:1px solid var(--b2);border-radius:var(--rs);padding:14px">
+              <p style="font-size:12px;font-weight:700;color:var(--acc);margin-bottom:8px">SEZIONI AGGIORNATE</p>
+              <div style="display:flex;flex-wrap:wrap;gap:6px">
+                ${log.map(l=>`<span class="badge bg-blue">${l}</span>`).join('')}
+              </div>
+            </div>
+            <p style="font-size:12px;color:var(--tl);margin-top:14px">Puoi modificare manualmente qualsiasi campo dall'app come di consueto.</p>
+          </div>
+          <div class="mft"><button class="btn btnp" onclick="cm('${mid}')">Perfetto</button></div>
+        </div></div>`);
+      }else{
+        toast('Nessun dato riconosciuto — verifica di usare il template corretto','⚠');
+      }
+    }catch(err){
+      console.error(err);
+      toast('Errore durante la lettura del file Excel','⚠');
+    }
+  };
+  reader.readAsArrayBuffer(f);
+}
+
+function expAll(){
+  const b=new Blob([JSON.stringify(S.workspaces,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(b);
+  a.download=`pmp_backup_${new Date().toISOString().slice(0,10)}.json`;a.click();toast('File esportato ✓');
+}
+function impJ(input){
+  const f=input.files[0];if(!f)return;
+  new Response(f).json().then(data=>{
+    const arr=Array.isArray(data)?data:[data];
+    arr.forEach(w=>{if(!w.id)w.id='ws'+Date.now();if(!S.workspaces.find(x=>x.id===w.id))S.workspaces.push(w);});
+    save();rWsSel();rSidebar();rContent();toast(`${arr.length} workspace importati`);
+  }).catch(()=>alert('File non valido'));
+}
+function clrAll(){
+  cdel('Eliminare TUTTI i workspace e i progetti? Azione irreversibile.',()=>{
+    S.workspaces=[];S.activeWs=null;S.activeProj=null;
+    /* cloud - cleared via save() */
+    rWsSel();rSidebar();rSecNav();rTopbar();rContent();toast('Dati eliminati','🗑');
+  });
+}
+
+// ===== AUTH =====
+let _ltab='in';
+function lTab(t){
+  _ltab=t;
+  document.getElementById('ltab-in').classList.toggle('active',t==='in');
+  document.getElementById('ltab-up').classList.toggle('active',t==='up');
+  document.getElementById('l-btn').textContent=t==='in'?'Accedi':'Crea account';
+  document.getElementById('l-pwd2-row').style.display=t==='up'?'':'none';
+  lMsg('','');
+}
+function lMsg(type,text){
+  const el=document.getElementById('lmsg');
+  if(!text){el.style.display='none';el.textContent='';return;}
+  el.className='lmsg '+type;
+  el.textContent=text;
+  el.style.display='block';
+}
+function lErrMap(e){
+  const m=(e.message||'').toLowerCase();
+  if(m.includes('invalid login credentials')||m.includes('invalid_credentials'))return 'Email o password errata.';
+  if(m.includes('email not confirmed'))return 'Conferma la tua email prima di accedere.';
+  if(m.includes('user already registered'))return 'Email gia registrata. Usa Accedi.';
+  if(m.includes('too many'))return 'Troppi tentativi. Riprova tra qualche minuto.';
+  if(m.includes('email_not_allowed')||m.includes('not_allowed'))return 'Email non autorizzata. Contatta l amministratore.';
+  if(m.includes('database error'))return 'Email non autorizzata. Contatta l amministratore.';
+  return e.message||'Errore. Riprova.';
+}
+async function lSubmit(){
+  const email=(document.getElementById('l-email').value||'').trim().toLowerCase();
+  const pwd=document.getElementById('l-pwd').value||'';
+  const pwd2=document.getElementById('l-pwd2').value||'';
+  const btn=document.getElementById('l-btn');
+  lMsg('','');
+  if(!email||!pwd){lMsg('err','Inserisci email e password.');return;}
+  if(_ltab==='up'&&pwd.length<6){lMsg('err','Password minimo 6 caratteri.');return;}
+  if(_ltab==='up'&&pwd!==pwd2){lMsg('err','Le password non coincidono.');return;}
+  btn.textContent='...';btn.disabled=true;
+  try{
+    if(_ltab==='up'){
+      const {data:wl}=await _SB.from('allowed_emails').select('email').eq('email',email).maybeSingle();
+      if(wl===null){
+        lMsg('err','Email non autorizzata. Contatta l amministratore.');
+        btn.textContent='Crea account';btn.disabled=false;return;
+      }
+      const {data,error}=await _SB.auth.signUp({email:email,password:pwd});
+      if(error)throw error;
+      if(data.user&&!data.session){
+        lMsg('info','Registrazione ok! Controlla la tua email e poi accedi.');
+        btn.textContent='Crea account';btn.disabled=false;return;
+      }
+    }else{
+      const {error}=await _SB.auth.signInWithPassword({email:email,password:pwd});
+      if(error)throw error;
+    }
+  }catch(e){
+    console.error('[PMP auth]',e);
+    lMsg('err',lErrMap(e));
+    btn.textContent=_ltab==='in'?'Accedi':'Crea account';
+    btn.disabled=false;
+  }
+}
+async function lOut(){
+  _hasRow=null;
+  S={workspaces:[],activeWs:null,activeProj:null,sec:'dashboard'};
+  await _SB.auth.signOut();
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('app').style.display='none';
+}
+function rUpill(){
+  const el=document.getElementById('u-pill');
+  if(!el||!_u)return;
+  const av=(_u.email||'??').substring(0,2).toUpperCase();
+  el.innerHTML='<div class="upill" onclick="lOut()" title="Clicca per uscire"><div class="upill-av">'+av+'</div><span class="upill-em">'+(_u.email||'')+'</span></div>';
+}
+
+// ===== INIT =====
+(async function(){
+  _SB.auth.onAuthStateChange(async function(event,session){
+    if(session&&session.user){
+      _u=session.user;
+      await load();
+      if(S.workspaces.length&&!S.workspaces.find(function(w){return w.id===S.activeWs;})){S.activeWs=S.workspaces[0].id;}
+      document.getElementById('login-screen').style.display='none';
+      document.getElementById('app').style.display='flex';
+      rUpill();rWsSel();rSidebar();rSecNav();rTopbar();rContent();
+    }else{
+      _u=null;
+      document.getElementById('login-screen').style.display='flex';
+      document.getElementById('app').style.display='none';
+    }
+  });
+  const r=await _SB.auth.getSession();
+  if(!r.data.session){
+    document.getElementById('login-screen').style.display='flex';
+    document.getElementById('app').style.display='none';
+  }
+}());
+</script>
+</body>
+</html>
