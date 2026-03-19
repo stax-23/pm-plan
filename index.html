@@ -296,12 +296,8 @@ const gv=id=>document.getElementById(id)?.value||'';
 const $=id=>document.getElementById(id);
 
 // ===== SUPABASE =====
-const _SB=supabase.createClient(
-  'https://ctapqhcxuwbxwnmnrfux.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN0YXBxaGN4dXdieHdubW5yZnV4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5MTMyNTksImV4cCI6MjA4OTQ4OTI1OX0.5coWgVxGY0Pwz62iiZrS7otiYuXvdDPsAQoPddFpNCY',
-  {auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}}
-);
-let _u=null,_stimer=null,_hasRow=null,_booting=false,_authing=false,_loginDone=false;
+const _SB=supabase.createClient('https://ctapqhcxuwbxwnmnrfux.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN0YXBxaGN4dXdieHdubW5yZnV4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5MTMyNTksImV4cCI6MjA4OTQ4OTI1OX0.5coWgVxGY0Pwz62iiZrS7otiYuXvdDPsAQoPddFpNCY');
+let _u=null,_stimer=null,_hasRow=null;
 
 let _pendingSave=false; // true = ci sono modifiche non ancora salvate
 
@@ -803,8 +799,8 @@ const LCFG={
     cols:['Codice','Descrizione','Livello','Responsabile','Stimato','Effettivo','Avanzamento','Note'],
     row:r=>[r.code||'—',r.description||'—',r.level?`<span class="badge bg-blue">L${r.level}</span>`:'—',r.owner||'—',r.estimatedDays?r.estimatedDays+'gg':'—',r.actualDays?r.actualDays+'gg':'—',r.completion?`<span style="display:inline-flex;align-items:center;gap:6px"><div class="pbar"><div class="pfill" style="width:${r.completion}%"></div></div><span style="font-size:12px">${r.completion}%</span></span>`:'—',r.note||'']},
   schedule:{t:'Schedule – Piano di Progetto',d:'Pianificazione attività con avanzamento e stato',a:'Attività',
-    cols:['ID','Attività','WBS','Responsabile','Inizio','Fine','Durata','% Compl.','Stato','Dipendenze','Milestone'],
-    row:r=>[r.id||'—',`<b>${r.name||'—'}</b>`,r.wbsRef||'—',r.owner||'—',r.start||'—',r.end||'—',(r.start&&r.end?Math.max(0,Math.round((new Date(r.end)-new Date(r.start))/864e5))+'gg':'—'),r.completion?r.completion+'%':'—',sB(r.status),r.deps?`<span style="font-size:12px;color:var(--tm)">${r.deps}</span>`:'—',r.milestone?`<span class="badge bg-indigo">⚑ Sì</span>`:'—']},
+    cols:['ID','Attività','WBS','Responsabile','Inizio','Fine','Durata','% Compl.','Stato','Milestone'],
+    row:r=>[r.id||'—',`<b>${r.name||'—'}</b>`,r.wbsRef||'—',r.owner||'—',r.start||'—',r.end||'—',(r.start&&r.end?Math.max(0,Math.round((new Date(r.end)-new Date(r.start))/864e5))+'gg':'—'),r.completion?r.completion+'%':'—',sB(r.status),r.milestone?`<span class="badge bg-indigo">⚑ Sì</span>`:'—']},
   risks:{t:'Risk Register',d:'Monitoraggio rischi · Score = Probabilità × Impatto (1-3)',a:'Rischio',
     cols:['ID','Data','Categoria','Descrizione','Prob.','Imp.','Score','Risposta','Owner','Stato'],
     row:r=>[r.id||'—',r.date||'—',r.category?`<span class="badge bg-indigo">${r.category}</span>`:'—',r.description||'—',r.prob||'—',r.impact||'—',spill((r.prob||0)*(r.impact||0)),r.response||'—',r.owner||'—',sB(r.status)]},
@@ -877,13 +873,8 @@ const sel2=(id,l,opts,v='')=>`<div class="field"><label>${l}</label><select id="
 window.f_wbs=(r)=>`<div class="fg fg2">${fi2('fc','Codice WBS',r.code)}${sel2('fl','Livello',['','1','2','3'],r.level)}<div class="field" style="grid-column:1/-1"><label>DESCRIZIONE ATTIVITÀ</label><input type="text" id="fd" value="${(r.description||'').replace(/"/g,'&quot;')}"/></div>${fi2('fo','Responsabile',r.owner)}${fi2('fes','Effort Stimato (gg)',r.estimatedDays,'number')}${fi2('fea','Effort Effettivo (gg)',r.actualDays,'number')}${fi2('fcp','Completamento %',r.completion,'number')}${ta2('fn','Note / Deliverable',r.note)}</div>`;
 window.c_wbs=()=>({code:gv('fc'),level:gv('fl'),description:gv('fd'),owner:gv('fo'),estimatedDays:gv('fes'),actualDays:gv('fea'),completion:gv('fcp'),note:gv('fn')});
 
-window.f_schedule=(r,proj)=>{
-  // Costruisce lista ID attività disponibili per le dipendenze
-  const otherIds=(proj.schedule||[]).filter(x=>x.id&&x.id!==r.id).map(x=>x.id+'  ('+x.name+')').join(', ');
-  const hint=otherIds?`<p style="font-size:11px;color:var(--tl);margin-top:4px">ID disponibili: ${otherIds}</p>`:'';
-  return`<div class="fg fg2">${fi2('fid','ID',r.id)}${fi2('fwr','WBS Ref',r.wbsRef)}<div class="field" style="grid-column:1/-1"><label>NOME ATTIVITÀ</label><input type="text" id="fnm" value="${(r.name||'').replace(/"/g,'&quot;')}"/></div>${fi2('fo','Responsabile',r.owner)}${fi2('fst','Data Inizio',r.start,'date')}${fi2('fen','Data Fine',r.end,'date')}${fi2('fcp','% Completamento',r.completion,'number')}${sel2('fss','Stato',['','In Attesa','In Corso','Completata','Rinviata','Bloccata'],r.status)}<div class="field"><label>Dipendenze (ID separati da virgola)</label><input type="text" id="fdeps" value="${(r.deps||'').replace(/"/g,'&quot;')}"/>${hint}</div>${sel2('fml','Milestone?',['','Sì','No'],r.milestone?'Sì':'No')}${ta2('fno','Note',r.note)}</div>`;
-};
-window.c_schedule=()=>({id:gv('fid'),name:gv('fnm'),wbsRef:gv('fwr'),owner:gv('fo'),start:gv('fst'),end:gv('fen'),completion:gv('fcp'),status:gv('fss'),deps:gv('fdeps'),milestone:gv('fml')==='Sì',note:gv('fno')});
+window.f_schedule=(r)=>`<div class="fg fg2">${fi2('fid','ID',r.id)}${fi2('fwr','WBS Ref',r.wbsRef)}<div class="field" style="grid-column:1/-1"><label>NOME ATTIVITÀ</label><input type="text" id="fnm" value="${(r.name||'').replace(/"/g,'&quot;')}"/></div>${fi2('fo','Responsabile',r.owner)}${fi2('fst','Data Inizio',r.start,'date')}${fi2('fen','Data Fine',r.end,'date')}${fi2('fcp','% Completamento',r.completion,'number')}${sel2('fss','Stato',['','In Attesa','In Corso','Completata','Rinviata','Bloccata'],r.status)}${sel2('fml','Milestone?',['','Sì','No'],r.milestone?'Sì':'No')}${ta2('fno','Note',r.note)}</div>`;
+window.c_schedule=()=>({id:gv('fid'),name:gv('fnm'),wbsRef:gv('fwr'),owner:gv('fo'),start:gv('fst'),end:gv('fen'),completion:gv('fcp'),status:gv('fss'),milestone:gv('fml')==='Sì',note:gv('fno')});
 
 window.f_risks=(r)=>`<div class="fg fg2">${fi2('fid','ID',r.id)}${fi2('fdt','Data',r.date,'date')}${sel2('fca','Categoria',['','Tecnico','Organizzativo','Finanziario','Legale','Qualità','Risorse','Esterno'],r.category)}<div class="field" style="grid-column:1/-1"><label>DESCRIZIONE RISCHIO</label><textarea id="fde">${r.description||''}</textarea></div>${sel2('fpr','Probabilità (1-3)',['','1','2','3'],r.prob)}${sel2('fim','Impatto (1-3)',['','1','2','3'],r.impact)}${sel2('fre','Risposta',['','Evitare','Mitigare','Trasferire','Accettare'],r.response)}${fi2('fow','Risk Owner',r.owner)}${sel2('fst','Stato',['','Identificato','In Monitoraggio','Mitigato','Accettato','Chiuso'],r.status)}${ta2('fno','Piano Contingenza / Note',r.note)}</div>`;
 window.c_risks=()=>({id:gv('fid'),date:gv('fdt'),category:gv('fca'),description:gv('fde'),prob:gv('fpr'),impact:gv('fim'),response:gv('fre'),owner:gv('fow'),status:gv('fst'),note:gv('fno')});
@@ -1169,9 +1160,7 @@ const XL_MAP = {
   // Schedule
   schedule: {id:'id',name:'name','nome attività':'name',wbsref:'wbsRef','wbs ref':'wbsRef',
     owner:'owner',responsabile:'owner','data inizio':'start','data fine':'end',start:'start',end:'end',
-    '% compl.':'completion','% completamento':'completion',stato:'status',
-    'dipendenze (id)':'deps',dipendenze:'deps',deps:'deps',
-    milestone:'milestone',note:'note'},
+    '% compl.':'completion','% completamento':'completion',stato:'status',milestone:'milestone',note:'note'},
   // Risks
   risks: {id:'id',data:'date','categoria':'category',descrizione:'description',
     'descrizione rischio':'description','probabilità\n(1-3)':'prob','probabilità':'prob',prob:'prob',
@@ -1499,57 +1488,53 @@ async function lSubmit(){
   const pwd=document.getElementById('l-pwd').value||'';
   const pwd2=document.getElementById('l-pwd2').value||'';
   const btn=document.getElementById('l-btn');
-  const tab=_getTab();
-  _ltab=tab;
+  const tab=_getTab(); // legge dal DOM, non dalla variabile
+  _ltab=tab;           // sincronizza la variabile
+  const label=tab==='in'?'Accedi':'Crea account';
+  console.log('[PMP] tab attivo:',tab,'email:',email);
   lMsg('','');
   if(!email||!pwd){lMsg('err','Inserisci email e password.');return;}
   if(tab==='up'&&pwd.length<6){lMsg('err','Password minimo 6 caratteri.');return;}
   if(tab==='up'&&pwd!==pwd2){lMsg('err','Le password non coincidono.');return;}
-  if(_authing){return;}
-  _authing=true;
   btn.textContent='...';btn.disabled=true;
   try{
     if(tab==='up'){
-      // Signup: controlla whitelist poi registra
+      // Controllo whitelist con timeout esplicito (evita Promise che non si risolve mai)
+      console.log('[PMP signup] controllo whitelist per:',email);
       let wlOk=true;
       try{
-        const to=new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),5000));
-        const res=await Promise.race([_SB.from('allowed_emails').select('email').eq('email',email).maybeSingle(),to]);
-        if(!res.error&&res.data===null)wlOk=false;
-      }catch(_){}
+        const wlPromise=_SB.from('allowed_emails').select('email').eq('email',email).maybeSingle();
+        const timeout=new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),5000));
+        const res=await Promise.race([wlPromise,timeout]);
+        console.log('[PMP signup] whitelist result:',res);
+        // Se non c'e' errore e la riga non esiste: email non autorizzata
+        if(!res.error&&res.data===null){wlOk=false;}
+        // Se c'e' errore (policy, rete, timeout): lasciamo passare e Supabase blocchera' via trigger
+      }catch(wlErr){
+        console.warn('[PMP signup] whitelist check fallito (policy o timeout):',wlErr.message);
+        // Non blocchiamo — il trigger DB o Supabase gestira' il rifiuto
+      }
       if(!wlOk){lMsg('err',"Email non autorizzata. Contatta l'amministratore.");return;}
+      console.log('[PMP signup] tentativo registrazione...');
       const {data,error}=await _SB.auth.signUp({email:email,password:pwd});
+      console.log('[PMP signup] result:',{user:data?.user?.email,session:!!data?.session,error});
       if(error)throw error;
       if(data.user&&!data.session){lMsg('info','Registrazione ok! Controlla la tua email e poi accedi.');return;}
     }else{
-      // Login: chiama signIn, poi gestisce il boot DIRETTAMENTE qui
-      // senza aspettare onAuthStateChange (che causa il loop)
+      console.log('[PMP login] tentativo per:',email);
       const {data,error}=await _SB.auth.signInWithPassword({email:email,password:pwd});
+      console.log('[PMP login] result:',{data,error});
       if(error)throw error;
-      // Boot diretto — non passare da onAuthStateChange
-      _u=data.user;
-      await load();
-      if(S.workspaces.length&&!S.workspaces.find(function(w){return w.id===S.activeWs;})){
-        S.activeWs=S.workspaces[0].id;
-      }
-      _booting=true; // blocca l'handler onAuthStateChange che arrivera' dopo
-      showApp(data.user);
-      setTimeout(function(){_booting=false;},3000);
-      return; // non passare per il finally — showApp ha gia' resettato _authing
     }
   }catch(e){
-    console.error('[PMP auth]',e.message,e.code);
+    console.error('[PMP auth] errore:',e.message,e.code,e);
     lMsg('err',lErrMap(e));
   }finally{
-    _authing=false;
     btn.textContent=_getTab()==='in'?'Accedi':'Crea account';
     btn.disabled=false;
   }
 }
-
 async function lOut(){
-  // Resetta flag di autenticazione
-  _loginDone=false;_authing=false;_booting=false;
   // Salva immediatamente prima di uscire
   if(_pendingSave){
     const el=document.getElementById('sync-status');
@@ -1579,38 +1564,63 @@ window.addEventListener('beforeunload',function(e){
 });
 
 // ===== INIT =====
-// Gestione sessione basata su onAuthStateChange (unica fonte di verita')
-// INITIAL_SESSION: token letto dal localStorage al reload pagina
-// SIGNED_IN:       utente ha appena fatto login
-// SIGNED_OUT:      logout o token invalido
-// TOKEN_REFRESHED: rinnovo automatico silenzioso
+(async function(){
 
-window.addEventListener('beforeunload',function(e){
-  if(_pendingSave){e.preventDefault();e.returnValue='';}
-});
+  // Pulizia sessione corrotta: se esiste un token in localStorage ma Supabase
+  // non riesce a validarlo, lo rimuoviamo subito cosi il login riparte pulito
+  async function cleanSession(){
+    try{
+      const r=await _SB.auth.getSession();
+      if(r.error){
+        console.warn('[PMP] sessione non valida, pulizia...',r.error.message);
+        await _SB.auth.signOut();
+        return null;
+      }
+      // Verifica extra: se il token e' scaduto forza refresh
+      if(r.data.session){
+        const exp=r.data.session.expires_at;
+        const now=Math.floor(Date.now()/1000);
+        if(exp&&exp<now){
+          console.warn('[PMP] token scaduto, refresh...');
+          const ref=await _SB.auth.refreshSession();
+          if(ref.error){
+            console.warn('[PMP] refresh fallito, pulizia...',ref.error.message);
+            await _SB.auth.signOut();
+            return null;
+          }
+          return ref.data.session;
+        }
+      }
+      return r.data.session;
+    }catch(e){
+      console.warn('[PMP] errore sessione, pulizia...',e.message);
+      try{await _SB.auth.signOut();}catch(_){}
+      return null;
+    }
+  }
 
-(function(){
-
-  // Pulisce token scaduti dal localStorage prima di ogni altra operazione
+  // Pulisci anche le chiavi Supabase da localStorage se sono corrotte
   function cleanLocalStorage(){
     try{
-      Object.keys(localStorage)
-        .filter(function(k){return k.startsWith('sb-');})
-        .forEach(function(k){
-          try{
-            var v=JSON.parse(localStorage.getItem(k));
-            if(v&&v.expires_at&&v.expires_at<Math.floor(Date.now()/1000)-300){
+      const keys=Object.keys(localStorage).filter(k=>k.startsWith('sb-'));
+      keys.forEach(k=>{
+        try{
+          const v=JSON.parse(localStorage.getItem(k));
+          // Se il token access_token e' presente ma scaduto, rimuovi
+          if(v&&v.access_token&&v.expires_at){
+            const now=Math.floor(Date.now()/1000);
+            if(v.expires_at<now-300){ // 5 min di tolleranza
+              console.warn('[PMP] rimosso token scaduto da localStorage:',k);
               localStorage.removeItem(k);
             }
-          }catch(_){}
-        });
+          }
+        }catch(_){}
+      });
     }catch(_){}
   }
 
   function showApp(user){
     _u=user;
-    _loginDone=false; // resetta per permettere futuri login dopo logout
-    _authing=false;
     document.getElementById('login-screen').style.display='none';
     document.getElementById('app').style.display='flex';
     rUpill();rWsSel();rSidebar();rSecNav();rTopbar();rContent();
@@ -1621,67 +1631,57 @@ window.addEventListener('beforeunload',function(e){
     document.getElementById('app').style.display='none';
   }
 
+  // Avvio: pulisci localStorage, poi controlla sessione esistente
   cleanLocalStorage();
+  const initSession=await cleanSession();
 
+  if(initSession&&initSession.user){
+    // Reload pagina con sessione valida: carica subito
+    await load();
+    if(S.workspaces.length&&!S.workspaces.find(function(w){return w.id===S.activeWs;})){
+      S.activeWs=S.workspaces[0].id;
+    }
+    showApp(initSession.user);
+  }else{
+    showLogin();
+  }
+
+  // Ascolta cambi sessione successivi (login, logout, token refresh)
   _SB.auth.onAuthStateChange(async function(event,session){
-    console.log('[PMP] auth event:',event,'user:',session&&session.user?session.user.email:'none');
+    console.log('[PMP] auth event:',event,'user:',session?.user?.email||'none');
 
     if(event==='SIGNED_OUT'||event==='USER_DELETED'){
-      _booting=false;_authing=false;
-      S={workspaces:[],activeWs:null,activeProj:null,sec:'dashboard'};
       showLogin();
       return;
     }
 
-    if(event==='INITIAL_SESSION'){
-      // Solo reload pagina: carica dati dalla sessione salvata
-      if(session&&session.user){
-        _u=session.user;
-        try{
-          await load();
-          if(S.workspaces.length&&!S.workspaces.find(function(w){return w.id===S.activeWs;})){
-            S.activeWs=S.workspaces[0].id;
-          }
-          showApp(session.user);
-        }catch(e){
-          console.error('[PMP] reload load error:',e);
-          S.workspaces=[];
-          showApp(session.user);
-        }
-      }else{
-        showLogin();
-      }
-      return;
-    }
-
     if(event==='SIGNED_IN'){
-      // Login appena completato — se _booting e' true significa che lSubmit
-      // ha gia' gestito il boot direttamente: ignoriamo questo evento
-      if(_booting){
-        console.log('[PMP] SIGNED_IN ignorato: boot gia gestito da lSubmit');
-        return;
-      }
-      // Caso raro: SIGNED_IN senza boot diretto (es. OAuth) — gestiamo qui
-      if(session&&session.user){
-        _u=session.user;
+      // Nuovo login appena completato — aspetta 400ms che il token
+      // sia scritto nel browser, poi carica i dati e mostra l'app
+      setTimeout(async function(){
         try{
+          const {data,error}=await _SB.auth.getSession();
+          if(error||!data.session){showLogin();return;}
+          _u=data.session.user;
           await load();
           if(S.workspaces.length&&!S.workspaces.find(function(w){return w.id===S.activeWs;})){
             S.activeWs=S.workspaces[0].id;
           }
-          showApp(session.user);
-        }catch(e){S.workspaces=[];showApp(session.user);}
-      }
-      return;
+          showApp(data.session.user);
+        }catch(e){
+          console.error('[PMP] post-login load error:',e);
+          showLogin();
+        }
+      },400);
     }
 
     if(event==='TOKEN_REFRESHED'){
       if(session&&session.user)_u=session.user;
     }
-  });
+
+  }); // end onAuthStateChange
 
 }());
-
 </script>
 </body>
 </html>
