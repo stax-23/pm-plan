@@ -1631,32 +1631,55 @@ window.addEventListener('beforeunload',function(e){
     document.getElementById('app').style.display='none';
   }
 
-  // Ascolta tutti i cambi di sessione
-  _SB.auth.onAuthStateChange(async function(event,session){
-    console.log('[PMP] auth event:',event,'user:',session?.user?.email||'none');
-    if(event==='SIGNED_OUT'||event==='USER_DELETED'){
-      showLogin();return;
-    }
-    if(event==='TOKEN_REFRESHED'||event==='SIGNED_IN'||event==='INITIAL_SESSION'){
-      if(session&&session.user){
-        await load();
-        if(S.workspaces.length&&!S.workspaces.find(function(w){return w.id===S.activeWs;})){
-          S.activeWs=S.workspaces[0].id;
-        }
-        showApp(session.user);
-      }else{
-        showLogin();
-      }
-    }
-  });
-
-  // Avvio: pulisci localStorage, poi controlla sessione
+  // Avvio: pulisci localStorage, poi controlla sessione esistente
   cleanLocalStorage();
-  const session=await cleanSession();
-  if(!session){
+  const initSession=await cleanSession();
+
+  if(initSession&&initSession.user){
+    // Reload pagina con sessione valida: carica subito
+    await load();
+    if(S.workspaces.length&&!S.workspaces.find(function(w){return w.id===S.activeWs;})){
+      S.activeWs=S.workspaces[0].id;
+    }
+    showApp(initSession.user);
+  }else{
     showLogin();
   }
-  // Se la sessione e' valida, onAuthStateChange la gestisce automaticamente
+
+  // Ascolta cambi sessione successivi (login, logout, token refresh)
+  _SB.auth.onAuthStateChange(async function(event,session){
+    console.log('[PMP] auth event:',event,'user:',session?.user?.email||'none');
+
+    if(event==='SIGNED_OUT'||event==='USER_DELETED'){
+      showLogin();
+      return;
+    }
+
+    if(event==='SIGNED_IN'){
+      // Nuovo login appena completato — aspetta 400ms che il token
+      // sia scritto nel browser, poi carica i dati e mostra l'app
+      setTimeout(async function(){
+        try{
+          const {data,error}=await _SB.auth.getSession();
+          if(error||!data.session){showLogin();return;}
+          _u=data.session.user;
+          await load();
+          if(S.workspaces.length&&!S.workspaces.find(function(w){return w.id===S.activeWs;})){
+            S.activeWs=S.workspaces[0].id;
+          }
+          showApp(data.session.user);
+        }catch(e){
+          console.error('[PMP] post-login load error:',e);
+          showLogin();
+        }
+      },400);
+    }
+
+    if(event==='TOKEN_REFRESHED'){
+      if(session&&session.user)_u=session.user;
+    }
+
+  }); // end onAuthStateChange
 
 }());
 </script>
