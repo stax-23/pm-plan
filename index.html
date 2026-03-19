@@ -1446,11 +1446,25 @@ async function lSubmit(){
   btn.textContent='...';btn.disabled=true;
   try{
     if(_ltab==='up'){
-      const {data:wl,error:wlErr}=await _SB.from('allowed_emails').select('email').eq('email',email).maybeSingle();
-      console.log('[PMP signup] whitelist:',{wl,wlErr});
-      if(!wlErr&&wl===null){lMsg('err','Email non autorizzata. Contatta l amministratore.');return;}
+      // Controllo whitelist con timeout esplicito (evita Promise che non si risolve mai)
+      console.log('[PMP signup] controllo whitelist per:',email);
+      let wlOk=true;
+      try{
+        const wlPromise=_SB.from('allowed_emails').select('email').eq('email',email).maybeSingle();
+        const timeout=new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),5000));
+        const res=await Promise.race([wlPromise,timeout]);
+        console.log('[PMP signup] whitelist result:',res);
+        // Se non c'e' errore e la riga non esiste: email non autorizzata
+        if(!res.error&&res.data===null){wlOk=false;}
+        // Se c'e' errore (policy, rete, timeout): lasciamo passare e Supabase blocchera' via trigger
+      }catch(wlErr){
+        console.warn('[PMP signup] whitelist check fallito (policy o timeout):',wlErr.message);
+        // Non blocchiamo — il trigger DB o Supabase gestira' il rifiuto
+      }
+      if(!wlOk){lMsg('err',"Email non autorizzata. Contatta l'amministratore.");return;}
+      console.log('[PMP signup] tentativo registrazione...');
       const {data,error}=await _SB.auth.signUp({email:email,password:pwd});
-      console.log('[PMP signup] result:',{data,error});
+      console.log('[PMP signup] result:',{user:data?.user?.email,session:!!data?.session,error});
       if(error)throw error;
       if(data.user&&!data.session){lMsg('info','Registrazione ok! Controlla la tua email e poi accedi.');return;}
     }else{
