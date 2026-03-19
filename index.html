@@ -1438,6 +1438,7 @@ async function lSubmit(){
   const pwd=document.getElementById('l-pwd').value||'';
   const pwd2=document.getElementById('l-pwd2').value||'';
   const btn=document.getElementById('l-btn');
+  const label=_ltab==='in'?'Accedi':'Crea account';
   lMsg('','');
   if(!email||!pwd){lMsg('err','Inserisci email e password.');return;}
   if(_ltab==='up'&&pwd.length<6){lMsg('err','Password minimo 6 caratteri.');return;}
@@ -1445,26 +1446,24 @@ async function lSubmit(){
   btn.textContent='...';btn.disabled=true;
   try{
     if(_ltab==='up'){
-      const {data:wl}=await _SB.from('allowed_emails').select('email').eq('email',email).maybeSingle();
-      if(wl===null){
-        lMsg('err','Email non autorizzata. Contatta l amministratore.');
-        btn.textContent='Crea account';btn.disabled=false;return;
-      }
+      const {data:wl,error:wlErr}=await _SB.from('allowed_emails').select('email').eq('email',email).maybeSingle();
+      console.log('[PMP signup] whitelist:',{wl,wlErr});
+      if(!wlErr&&wl===null){lMsg('err','Email non autorizzata. Contatta l amministratore.');return;}
       const {data,error}=await _SB.auth.signUp({email:email,password:pwd});
+      console.log('[PMP signup] result:',{data,error});
       if(error)throw error;
-      if(data.user&&!data.session){
-        lMsg('info','Registrazione ok! Controlla la tua email e poi accedi.');
-        btn.textContent='Crea account';btn.disabled=false;return;
-      }
+      if(data.user&&!data.session){lMsg('info','Registrazione ok! Controlla la tua email e poi accedi.');return;}
     }else{
-      const {error}=await _SB.auth.signInWithPassword({email:email,password:pwd});
+      console.log('[PMP login] tentativo per:',email);
+      const {data,error}=await _SB.auth.signInWithPassword({email:email,password:pwd});
+      console.log('[PMP login] result:',{data,error});
       if(error)throw error;
     }
   }catch(e){
-    console.error('[PMP auth]',e);
+    console.error('[PMP auth] errore:',e.message,e.code,e);
     lMsg('err',lErrMap(e));
-    btn.textContent=_ltab==='in'?'Accedi':'Crea account';
-    btn.disabled=false;
+  }finally{
+    btn.textContent=label;btn.disabled=false;
   }
 }
 async function lOut(){
