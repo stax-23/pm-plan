@@ -1416,6 +1416,11 @@ function lTab(t){
   document.getElementById('l-pwd2-row').style.display=t==='up'?'':'none';
   lMsg('','');
 }
+function _getTab(){
+  // Legge lo stato reale dal DOM — immune a reinizializzazioni della variabile
+  const upActive=document.getElementById('ltab-up')?.classList.contains('active');
+  return upActive?'up':'in';
+}
 function lMsg(type,text){
   const el=document.getElementById('lmsg');
   if(!text){el.style.display='none';el.textContent='';return;}
@@ -1438,14 +1443,17 @@ async function lSubmit(){
   const pwd=document.getElementById('l-pwd').value||'';
   const pwd2=document.getElementById('l-pwd2').value||'';
   const btn=document.getElementById('l-btn');
-  const label=_ltab==='in'?'Accedi':'Crea account';
+  const tab=_getTab(); // legge dal DOM, non dalla variabile
+  _ltab=tab;           // sincronizza la variabile
+  const label=tab==='in'?'Accedi':'Crea account';
+  console.log('[PMP] tab attivo:',tab,'email:',email);
   lMsg('','');
   if(!email||!pwd){lMsg('err','Inserisci email e password.');return;}
-  if(_ltab==='up'&&pwd.length<6){lMsg('err','Password minimo 6 caratteri.');return;}
-  if(_ltab==='up'&&pwd!==pwd2){lMsg('err','Le password non coincidono.');return;}
+  if(tab==='up'&&pwd.length<6){lMsg('err','Password minimo 6 caratteri.');return;}
+  if(tab==='up'&&pwd!==pwd2){lMsg('err','Le password non coincidono.');return;}
   btn.textContent='...';btn.disabled=true;
   try{
-    if(_ltab==='up'){
+    if(tab==='up'){
       // Controllo whitelist con timeout esplicito (evita Promise che non si risolve mai)
       console.log('[PMP signup] controllo whitelist per:',email);
       let wlOk=true;
@@ -1477,7 +1485,8 @@ async function lSubmit(){
     console.error('[PMP auth] errore:',e.message,e.code,e);
     lMsg('err',lErrMap(e));
   }finally{
-    btn.textContent=label;btn.disabled=false;
+    btn.textContent=_getTab()==='in'?'Accedi':'Crea account';
+    btn.disabled=false;
   }
 }
 async function lOut(){
@@ -1496,25 +1505,99 @@ function rUpill(){
 
 // ===== INIT =====
 (async function(){
-  _SB.auth.onAuthStateChange(async function(event,session){
-    if(session&&session.user){
-      _u=session.user;
-      await load();
-      if(S.workspaces.length&&!S.workspaces.find(function(w){return w.id===S.activeWs;})){S.activeWs=S.workspaces[0].id;}
-      document.getElementById('login-screen').style.display='none';
-      document.getElementById('app').style.display='flex';
-      rUpill();rWsSel();rSidebar();rSecNav();rTopbar();rContent();
-    }else{
-      _u=null;
-      document.getElementById('login-screen').style.display='flex';
-      document.getElementById('app').style.display='none';
+
+  // Pulizia sessione corrotta: se esiste un token in localStorage ma Supabase
+  // non riesce a validarlo, lo rimuoviamo subito cosi il login riparte pulito
+  async function cleanSession(){
+    try{
+      const r=await _SB.auth.getSession();
+      if(r.error){
+        console.warn('[PMP] sessione non valida, pulizia...',r.error.message);
+        await _SB.auth.signOut();
+        return null;
+      }
+      // Verifica extra: se il token e' scaduto forza refresh
+      if(r.data.session){
+        const exp=r.data.session.expires_at;
+        const now=Math.floor(Date.now()/1000);
+        if(exp&&exp<now){
+          console.warn('[PMP] token scaduto, refresh...');
+          const ref=await _SB.auth.refreshSession();
+          if(ref.error){
+            console.warn('[PMP] refresh fallito, pulizia...',ref.error.message);
+            await _SB.auth.signOut();
+            return null;
+          }
+          return ref.data.session;
+        }
+      }
+      return r.data.session;
+    }catch(e){
+      console.warn('[PMP] errore sessione, pulizia...',e.message);
+      try{await _SB.auth.signOut();}catch(_){}
+      return null;
     }
-  });
-  const r=await _SB.auth.getSession();
-  if(!r.data.session){
+  }
+
+  // Pulisci anche le chiavi Supabase da localStorage se sono corrotte
+  function cleanLocalStorage(){
+    try{
+      const keys=Object.keys(localStorage).filter(k=>k.startsWith('sb-'));
+      keys.forEach(k=>{
+        try{
+          const v=JSON.parse(localStorage.getItem(k));
+          // Se il token access_token e' presente ma scaduto, rimuovi
+          if(v&&v.access_token&&v.expires_at){
+            const now=Math.floor(Date.now()/1000);
+            if(v.expires_at<now-300){ // 5 min di tolleranza
+              console.warn('[PMP] rimosso token scaduto da localStorage:',k);
+              localStorage.removeItem(k);
+            }
+          }
+        }catch(_){}
+      });
+    }catch(_){}
+  }
+
+  function showApp(user){
+    _u=user;
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('app').style.display='flex';
+    rUpill();rWsSel();rSidebar();rSecNav();rTopbar();rContent();
+  }
+  function showLogin(){
+    _u=null;
     document.getElementById('login-screen').style.display='flex';
     document.getElementById('app').style.display='none';
   }
+
+  // Ascolta tutti i cambi di sessione
+  _SB.auth.onAuthStateChange(async function(event,session){
+    console.log('[PMP] auth event:',event,'user:',session?.user?.email||'none');
+    if(event==='SIGNED_OUT'||event==='USER_DELETED'){
+      showLogin();return;
+    }
+    if(event==='TOKEN_REFRESHED'||event==='SIGNED_IN'||event==='INITIAL_SESSION'){
+      if(session&&session.user){
+        await load();
+        if(S.workspaces.length&&!S.workspaces.find(function(w){return w.id===S.activeWs;})){
+          S.activeWs=S.workspaces[0].id;
+        }
+        showApp(session.user);
+      }else{
+        showLogin();
+      }
+    }
+  });
+
+  // Avvio: pulisci localStorage, poi controlla sessione
+  cleanLocalStorage();
+  const session=await cleanSession();
+  if(!session){
+    showLogin();
+  }
+  // Se la sessione e' valida, onAuthStateChange la gestisce automaticamente
+
 }());
 </script>
 </body>
