@@ -301,7 +301,7 @@ const _SB=supabase.createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN0YXBxaGN4dXdieHdubW5yZnV4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5MTMyNTksImV4cCI6MjA4OTQ4OTI1OX0.5coWgVxGY0Pwz62iiZrS7otiYuXvdDPsAQoPddFpNCY',
   {auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}}
 );
-let _u=null,_stimer=null,_hasRow=null,_booting=false,_authing=false,_loginDone=false;
+let _u=null,_stimer=null,_hasRow=null;
 
 let _pendingSave=false; // true = ci sono modifiche non ancora salvate
 
@@ -1497,10 +1497,9 @@ function lErrMap(e){
 async function lSubmit(){
   const email=(document.getElementById('l-email').value||'').trim().toLowerCase();
   const pwd=document.getElementById('l-pwd').value||'';
-  const pwd2=document.getElementById('l-pwd2').value||'';
+  const pwd2=(document.getElementById('l-pwd2').value||'');
   const btn=document.getElementById('l-btn');
-  const tab=_getTab();
-  _ltab=tab;
+  const tab=_getTab(); _ltab=tab;
   const label=tab==='in'?'Accedi':'Crea account';
   lMsg('','');
   if(!email||!pwd){lMsg('err','Inserisci email e password.');return;}
@@ -1509,69 +1508,57 @@ async function lSubmit(){
   btn.textContent='...';btn.disabled=true;
   try{
     if(tab==='up'){
-      // Signup: controlla whitelist con timeout
       let wlOk=true;
       try{
-        const wlRes=await Promise.race([
+        const r=await Promise.race([
           _SB.from('allowed_emails').select('email').eq('email',email).maybeSingle(),
-          new Promise(function(_,rej){setTimeout(function(){rej(new Error('timeout'));},5000);})
+          new Promise(function(_,rej){setTimeout(function(){rej(new Error('t'));},5000);})
         ]);
-        if(!wlRes.error&&wlRes.data===null){wlOk=false;}
-      }catch(e){console.warn('[PMP] whitelist timeout, proceeding');}
+        if(!r.error&&r.data===null)wlOk=false;
+      }catch(_){}
       if(!wlOk){lMsg('err',"Email non autorizzata. Contatta l'amministratore.");return;}
-      const {data,error}=await _SB.auth.signUp({email:email,password:pwd});
-      if(error)throw error;
-      if(data.user&&!data.session){
-        lMsg('info',"Registrazione ok! Controlla la tua email per confermare l'account, poi accedi.");
-        return;
-      }
-      // Signup con auto-confirm: procedi come login
-      if(data.user&&data.session){
-        _u=data.user;
-        _hasRow=null;
-        await load();
-        if(S.workspaces.length&&!S.workspaces.find(function(w){return w.id===S.activeWs;})){
-          S.activeWs=S.workspaces[0].id;
-        }
-        _showApp(data.user);
+      const up=await _SB.auth.signUp({email:email,password:pwd});
+      if(up.error)throw up.error;
+      if(up.data.user&&!up.data.session){
+        lMsg('info',"Registrazione ok! Controlla la tua email e poi accedi.");return;
       }
     }else{
-      // Login: gestisci tutto qui, non aspettare onAuthStateChange
-      const {data,error}=await _SB.auth.signInWithPassword({email:email,password:pwd});
-      if(error)throw error;
-      if(data.user&&data.session){
-        _u=data.user;
-        _hasRow=null;
-        await load();
-        if(S.workspaces.length&&!S.workspaces.find(function(w){return w.id===S.activeWs;})){
-          S.activeWs=S.workspaces[0].id;
-        }
-        _showApp(data.user);
+      const si=await _SB.auth.signInWithPassword({email:email,password:pwd});
+      if(si.error)throw si.error;
+    }
+    // Login/signup riuscito: carica i dati direttamente con getSession
+    const gs=await _SB.auth.getSession();
+    if(gs.data&&gs.data.session&&gs.data.session.user){
+      _u=gs.data.session.user;
+      _hasRow=null;
+      await load();
+      if(S.workspaces.length&&!S.workspaces.find(function(w){return w.id===S.activeWs;})){
+        S.activeWs=S.workspaces[0].id;
       }
+      _showApp(_u);
     }
   }catch(e){
     console.error('[PMP auth]',e.message,e.code);
     lMsg('err',lErrMap(e));
   }finally{
-    btn.textContent=label;btn.disabled=false;
+    // Riabilita sempre il bottone
+    const b=document.getElementById('l-btn');
+    if(b){b.textContent=label;b.disabled=false;}
   }
 }
 
 async function lOut(){
-  // Resetta flag di autenticazione
-  _loginDone=false;_authing=false;_booting=false;
-  // Salva immediatamente prima di uscire
   if(_pendingSave){
     const el=document.getElementById('sync-status');
     if(el){el.textContent='Salvataggio...';el.style.color='rgba(255,200,80,.9)';}
     await saveNow();
   }
-  _hasRow=null;
   _pendingSave=false;
-  S={workspaces:[],activeWs:null,activeProj:null,sec:'dashboard'};
+  _hasRow=null;
   await _SB.auth.signOut();
-  _showLogin();
+  // _showLogin viene chiamato da onAuthStateChange SIGNED_OUT
 }
+
 function rUpill(){
   const el=document.getElementById('u-pill');
   if(!el||!_u)return;
@@ -1592,66 +1579,56 @@ window.addEventListener('beforeunload',function(e){
   if(_pendingSave){e.preventDefault();e.returnValue='';}
 });
 
-(function(){
+// _showApp e _showLogin sono funzioni globali accessibili da lSubmit e onAuthStateChange
+function _showApp(user){
+  _u=user;
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app').style.display='flex';
+  rUpill();rWsSel();rSidebar();rSecNav();rTopbar();rContent();
+  sbSaved(true);
+}
+function _showLogin(){
+  _u=null;
+  _hasRow=null;
+  S={workspaces:[],activeWs:null,activeProj:null,sec:'dashboard'};
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('app').style.display='none';
+}
 
-  function _showApp(user){
-    _u=user;
-    document.getElementById('login-screen').style.display='none';
-    document.getElementById('app').style.display='flex';
-    rUpill();rWsSel();rSidebar();rSecNav();rTopbar();rContent();
+// onAuthStateChange gestisce SOLO logout e refresh token silenzioso
+// Login e caricamento iniziale sono gestiti direttamente da lSubmit e getSession()
+_SB.auth.onAuthStateChange(function(event,session){
+  console.log('[PMP] auth event:',event,'user:',(session&&session.user?session.user.email:'none'));
+  if(event==='SIGNED_OUT'||event==='USER_DELETED'){
+    _showLogin();
+    return;
   }
-  function _showLogin(){
-    _u=null;
-    _hasRow=null;
-    S={workspaces:[],activeWs:null,activeProj:null,sec:'dashboard'};
-    document.getElementById('login-screen').style.display='flex';
-    document.getElementById('app').style.display='none';
+  if(event==='TOKEN_REFRESHED'){
+    if(session&&session.user)_u=session.user;
+    return;
   }
+  // Tutti gli altri eventi (SIGNED_IN, INITIAL_SESSION) ignorati —
+  // gestiti direttamente da getSession() qui sotto o da lSubmit
+});
 
-  // Esponi queste funzioni globalmente (usate da lSubmit e lOut)
-  window._showApp=_showApp;
-  window._showLogin=_showLogin;
-
-  _SB.auth.onAuthStateChange(async function(event,session){
-    console.log('[PMP] auth event:',event,'user:',(session&&session.user?session.user.email:'none'));
-
-    if(event==='SIGNED_OUT'||event==='USER_DELETED'){
-      _showLogin();
-      return;
-    }
-
-    if(event==='INITIAL_SESSION'){
-      // Refresh pagina (CTRL+R) o primo caricamento
-      if(session&&session.user){
-        _u=session.user;
-        try{
-          await load();
-          if(S.workspaces.length&&!S.workspaces.find(function(w){return w.id===S.activeWs;})){
-            S.activeWs=S.workspaces[0].id;
-          }
-          _showApp(session.user);
-        }catch(e){
-          console.error('[PMP] INITIAL_SESSION load error:',e);
-          // Anche se load() fallisce, mostra l'app con dati vuoti
-          // piuttosto che rimandare al login
-          _showApp(session.user);
-        }
-      }else{
-        _showLogin();
+// Controlla sessione esistente al caricamento (gestisce CTRL+R)
+(async function(){
+  try{
+    var gs=await _SB.auth.getSession();
+    if(gs.data&&gs.data.session&&gs.data.session.user){
+      _u=gs.data.session.user;
+      await load();
+      if(S.workspaces.length&&!S.workspaces.find(function(w){return w.id===S.activeWs;})){
+        S.activeWs=S.workspaces[0].id;
       }
-      return;
+      _showApp(_u);
+    }else{
+      _showLogin();
     }
-
-    if(event==='TOKEN_REFRESHED'){
-      // Rinnovo silenzioso — aggiorna solo l'utente
-      if(session&&session.user)_u=session.user;
-      return;
-    }
-
-    // SIGNED_IN viene ignorato qui: lSubmit lo gestisce direttamente
-    // per evitare race condition con il bottone "..."
-  });
-
+  }catch(e){
+    console.error('[PMP] init error:',e);
+    _showLogin();
+  }
 }());
 </script>
 </body>
