@@ -202,6 +202,25 @@ textarea{resize:vertical;min-height:68px}
 .upill-av{width:22px;height:22px;border-radius:50%;background:var(--acc);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0}
 .upill-em{font-size:11px;color:rgba(255,255,255,.7);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
+
+/* RICH TEXT EDITOR */
+.rt-wrap{border:1.5px solid var(--bd);border-radius:var(--rs);overflow:hidden;background:var(--sf);transition:border-color .15s}
+.rt-wrap:focus-within{border-color:var(--acc);box-shadow:0 0 0 3px rgba(37,99,235,.09)}
+.rt-toolbar{display:flex;gap:4px;padding:6px 10px;background:var(--s2);border-bottom:1px solid var(--bd);flex-wrap:wrap}
+.rt-btn{background:none;border:1px solid var(--bd);border-radius:4px;cursor:pointer;padding:3px 9px;font-size:12px;color:var(--tm);font-family:var(--ff);transition:all .15s;line-height:1.4}
+.rt-btn:hover{background:var(--acl);border-color:var(--acc);color:var(--acc)}
+.rt-editor{padding:10px 14px;min-height:90px;outline:none;font-size:13.5px;line-height:1.6;color:var(--tx);font-family:var(--ff)}
+.rt-editor[data-placeholder]:empty::before{content:attr(data-placeholder);color:var(--tl);pointer-events:none}
+.rt-editor ul,.rt-editor ol{padding-left:20px;margin:4px 0}
+.rt-editor li{margin:2px 0}
+.rt-editor b,.rt-editor strong{font-weight:700}
+.rt-editor i,.rt-editor em{font-style:italic}
+.rt-view{font-size:13.5px;line-height:1.6;color:var(--tx)}
+.rt-view ul,.rt-view ol{padding-left:20px;margin:4px 0}
+.rt-view li{margin:2px 0}
+.rt-view b,.rt-view strong{font-weight:700}
+.rt-view i,.rt-view em{font-style:italic}
+
 </style>
 </head>
 <body>
@@ -397,9 +416,22 @@ function newProj(name){
   const projs=wsProjects();
   const color=PC[projs.length%PC.length];
   return{id:Date.now().toString(),name,color,
-    dashboard:{pm:'',sponsor:'',start:'',end:'',phase:'',rag:{scope:'',schedule:'',budget:'',quality:'',risks:''},milestones:[]},
-    charter:{projectName:name,code:'',pm:'',sponsor:'',start:'',end:'',budget:'',objective:'',secondaryObj:'',benefits:'',inScope:'',outScope:'',constraints:'',assumptions:'',dependencies:'',stakeholders:'',initialRisks:''},
-    wbs:[],schedule:[],raci:{roles:[],activities:[]},risks:[],issues:[],budget:[],changes:[],stakeholders:[],lessons:[]
+    dashboard:{pm:'',sponsor:'',start:'',end:'',phase:'',
+      objectives:'',assumptions:'',
+      moscow:{must:'',should:'',could:'',wont:''},
+      budgetMoney:'',budgetHours:'',
+      rag:{scope:'',schedule:'',budget:'',quality:'',risks:''},
+      milestones:[]},
+    charter:{projectName:name,code:'',pm:'',sponsor:'',start:'',end:'',
+      budget:'',budgetHours:'',
+      objective:'',secondaryObj:'',benefits:'',
+      moscow:{must:'',should:'',could:'',wont:''},
+      inScope:'',outScope:'',constraints:'',assumptions:'',
+      dependencies:'',stakeholders:'',initialRisks:''},
+    wbs:[],schedule:[],raci:{roles:[],activities:[]},
+    risks:[],issues:[],budget:[],changes:[],stakeholders:[],lessons:[],
+    resources:[],   // Resource Planning
+    meetings:[]     // Meeting Notes
   };
 }
 function newWs(name,icon){
@@ -436,6 +468,56 @@ function sB(s){
   return`<span class="badge ${m[s]||'bg-gray'}">${s}</span>`;
 }
 function spill(s){const n=parseInt(s)||0;return`<span class="spill ${n<=2?'sl':n<=5?'sm':'sh'}">${n||'—'}</span>`;}
+
+// ══════════ RICH TEXT EDITOR ══════════════════════════════════════════════
+// Lightweight contenteditable editor with Bold/Italic/Bullets
+// Usage: rtEditor(id, value) → HTML string for form
+//        rtValue(id) → current HTML content
+
+function rtEditor(id,val='',placeholder=''){
+  return`<div class="rt-wrap">
+    <div class="rt-toolbar">
+      <button type="button" class="rt-btn" onclick="rtCmd('${id}','bold')" title="Grassetto"><b>B</b></button>
+      <button type="button" class="rt-btn" onclick="rtCmd('${id}','italic')" title="Corsivo"><i>I</i></button>
+      <button type="button" class="rt-btn" onclick="rtCmd('${id}','insertUnorderedList')" title="Elenco">• Lista</button>
+      <button type="button" class="rt-btn" onclick="rtCmd('${id}','insertOrderedList')" title="Numerato">1. Lista</button>
+      <button type="button" class="rt-btn" onclick="rtClear('${id}')" title="Pulisci">✕ Pulisci</button>
+    </div>
+    <div class="rt-editor" id="${id}" contenteditable="true" 
+      style="min-height:90px"
+      data-placeholder="${placeholder}"
+      oninput="rtOnInput(this)"
+    >${val||''}</div>
+  </div>`;
+}
+function rtCmd(id,cmd){
+  const el=document.getElementById(id);
+  if(!el)return;
+  el.focus();
+  document.execCommand(cmd,false,null);
+  el.dispatchEvent(new Event('input'));
+}
+function rtClear(id){
+  const el=document.getElementById(id);
+  if(el){el.innerHTML='';el.dispatchEvent(new Event('input'));}
+}
+function rtValue(id){
+  const el=document.getElementById(id);
+  if(!el)return'';
+  const h=el.innerHTML.trim();
+  // Normalizza: rimuove span di stile eccessivo ma mantiene b,i,ul,ol,li,p,br
+  return h==='<br>'?'':h;
+}
+function rtOnInput(el){
+  // Mostra/nascondi placeholder
+  el.style.color=el.innerHTML.trim()===''||el.innerHTML==='<br>'?'var(--tl)':'var(--tx)';
+}
+// Render HTML da rich text in modalità lettura
+function rtRender(html,fallback='—'){
+  if(!html)return`<span style="color:var(--tl);font-style:italic">${fallback}</span>`;
+  return`<div class="rt-view">${html}</div>`;
+}
+
 
 // ═══════════════════ WORKSPACE ════════════════════════════════════════════════
 const WS_ICONS=['📁','🏢','🚀','⚙️','💼','🏗️','🌐','🔬','📊','🎯'];
@@ -513,12 +595,14 @@ const SECS=[
   {id:'charter',i:'📋',l:'Project Charter'},
   {id:'wbs',i:'🌿',l:'WBS'},
   {id:'schedule',i:'📅',l:'Schedule'},
+  {id:'resources',i:'👤',l:'Resource Planning'},
   {id:'raci',i:'👥',l:'RACI Matrix'},
   {id:'risks',i:'⚠️',l:'Risk Register'},
   {id:'issues',i:'🐛',l:'Issue Log'},
   {id:'budget',i:'💰',l:'Budget & EVM'},
   {id:'changes',i:'🔄',l:'Change Log'},
   {id:'stakeholders',i:'🤝',l:'Stakeholders'},
+  {id:'meetings',i:'📝',l:'Meeting Notes'},
   {id:'lessons',i:'📖',l:'Lessons Learned'},
 ];
 
@@ -613,7 +697,7 @@ function rContent(){
   if(!S.activeProj){rHomeWs();return;}
   const proj=activeProj();if(!proj){rHomeWs();return;}
   const tb=$('tb-actions');
-  const fn={dashboard:rDash,charter:rCharter,wbs:rList,schedule:rList,raci:rRaci,risks:rList,issues:rList,budget:rBudget,changes:rList,stakeholders:rList,lessons:rList}[S.sec];
+  const fn={dashboard:rDash,charter:rCharter,wbs:rList,schedule:rList,resources:rResources,raci:rRaci,risks:rList,issues:rList,budget:rBudget,changes:rList,stakeholders:rList,meetings:rMeetings,lessons:rList}[S.sec];
   if(fn)fn(proj,c,tb,S.sec);
 }
 
@@ -659,29 +743,80 @@ function rHomeWs(){
 function rDash(proj,c,tb){
   const d=proj.dashboard;
   tb.innerHTML=`<button class="btn btnp bsm" onclick="editDash('${proj.id}')">✏ Modifica</button>`;
+
+  // KPI row
+  const ro=(proj.risks||[]).filter(r=>r.status!=='Chiuso').length;
+  const io=(proj.issues||[]).filter(r=>r.status==='Aperta'||r.status==='In Corso').length;
+  const t=(proj.schedule||[]).length,dn=(proj.schedule||[]).filter(x=>x.status==='Completata').length;
+  const pct=t?Math.round(dn/t*100):0;
+  const cpCount=(proj.wbs||[]).filter(w=>w.criticalPath).length;
+
+  // Resource summary
+  const res=proj.resources||[];
+  const totFTE=res.reduce((s,r)=>s+(parseFloat(r.fte)||0),0);
+  const totPlanned=res.reduce((s,r)=>s+(parseFloat(r.plannedHours)||0),0);
+  const totActual=res.reduce((s,r)=>s+(parseFloat(r.actualHours)||0),0);
+
+  // Budget hours
+  const bH=parseFloat(d.budgetHours)||0;
+  const bHpct=bH>0?Math.min(100,Math.round(totActual/bH*100)):0;
+
+  // Last 3 meetings
+  const mtgs=(proj.meetings||[]).slice().sort((a,b)=>b.date.localeCompare(a.date)).slice(0,3);
+
+  // RAG rows
   const ragR=['scope','schedule','budget','quality','risks'].map(k=>`<tr>
-    <td style="font-size:10.5px;font-weight:700;color:var(--tm);text-transform:uppercase;letter-spacing:.4px;background:var(--s2);border-right:1px solid var(--bd);padding:10px 14px;width:110px">${{scope:'Scope',schedule:'Schedule',budget:'Budget',quality:'Qualità',risks:'Rischi'}[k]}</td>
-    <td style="padding:10px 14px">${ragB(d.rag[k])}</td></tr>`).join('');
+    <td style="font-size:10.5px;font-weight:700;color:var(--tm);text-transform:uppercase;letter-spacing:.4px;background:var(--s2);border-right:1px solid var(--bd);padding:9px 14px;width:110px">${{scope:'Scope',schedule:'Schedule',budget:'Budget',quality:'Qualità',risks:'Rischi'}[k]}</td>
+    <td style="padding:9px 14px">${ragB(d.rag[k])}</td></tr>`).join('');
+
   const mlR=(d.milestones||[]).map((m,i)=>`<tr>
     <td style="font-weight:500">${m.name||'—'}</td><td>${m.planned||'—'}</td><td>${m.actual||'—'}</td>
     <td>${sB(m.status)}</td><td>${m.note||''}</td>
     <td><div class="ac"><button class="reb" onclick="editML('${proj.id}',${i})">Modifica</button><button class="deb" onclick="delML('${proj.id}',${i})">✕</button></div></td></tr>`).join('');
-  const ro=(proj.risks||[]).filter(r=>r.status!=='Chiuso').length;
-  const io=(proj.issues||[]).filter(r=>r.status==='Aperta'||r.status==='In Corso').length;
-  const t=(proj.schedule||[]).length;const dn=(proj.schedule||[]).filter(x=>x.status==='Completata').length;
-  const pct=t?Math.round(dn/t*100):0;
+
+  // MoSCoW display
+  const moscowLabels={must:'Must Have',should:'Should Have',could:'Could Have',wont:"Won't Have"};
+  const moscowColors={must:'bg-red',should:'bg-yellow',could:'bg-blue',wont:'bg-gray'};
+  const moscowHtml=Object.keys(moscowLabels).map(k=>{
+    const v=(d.moscow||{})[k];
+    if(!v)return'';
+    return`<div style="margin-bottom:10px"><span class="badge ${moscowColors[k]}" style="margin-bottom:5px">${moscowLabels[k]}</span><div class="rt-view" style="font-size:12.5px;padding:4px 0">${v}</div></div>`;
+  }).join('');
+
   c.innerHTML=`<div class="phd"><div><h1>Dashboard</h1><p>Panoramica stato del progetto</p></div></div>
+
+  <!-- KPI Row 1 -->
   <div class="kgrid">
-    <div class="kcard"><div class="klabel">Project Manager</div><div class="kval" style="font-size:16px;letter-spacing:-.2px;margin-top:4px">${d.pm||'—'}</div></div>
-    <div class="kcard"><div class="klabel">Sponsor</div><div class="kval" style="font-size:16px;letter-spacing:-.2px;margin-top:4px">${d.sponsor||'—'}</div></div>
-    <div class="kcard"><div class="klabel">Fase Attuale</div><div class="kval" style="font-size:16px;letter-spacing:-.2px;margin-top:4px">${d.phase||'—'}</div></div>
-    <div class="kcard"><div class="klabel">Data Fine</div><div class="kval" style="font-size:16px;letter-spacing:-.2px;margin-top:4px">${d.end||'—'}</div></div>
-    <div class="kcard"><div class="klabel">Avanzamento</div><div class="kval">${pct}%</div><div style="margin-top:8px"><div class="pbar" style="width:100%"><div class="pfill" style="width:${pct}%"></div></div></div></div>
+    <div class="kcard"><div class="klabel">Project Manager</div><div class="kval" style="font-size:15px;letter-spacing:-.2px;margin-top:4px">${d.pm||'—'}</div></div>
+    <div class="kcard"><div class="klabel">Sponsor</div><div class="kval" style="font-size:15px;letter-spacing:-.2px;margin-top:4px">${d.sponsor||'—'}</div></div>
+    <div class="kcard"><div class="klabel">Fase</div><div class="kval" style="font-size:15px;letter-spacing:-.2px;margin-top:4px">${d.phase||'—'}</div></div>
+    <div class="kcard"><div class="klabel">Data Fine</div><div class="kval" style="font-size:15px;letter-spacing:-.2px;margin-top:4px">${d.end||'—'}</div></div>
+    <div class="kcard"><div class="klabel">Avanzamento Task</div><div class="kval">${pct}%</div><div style="margin-top:8px"><div class="pbar" style="width:100%"><div class="pfill" style="width:${pct}%"></div></div></div></div>
     <div class="kcard"><div class="klabel">Rischi Aperti</div><div class="kval" style="color:${ro>2?'var(--dn)':ro>0?'var(--wn)':'var(--gn)'}">${ro}</div><div class="ksub">su ${(proj.risks||[]).length} totali</div></div>
     <div class="kcard"><div class="klabel">Issue Aperte</div><div class="kval" style="color:${io>0?'var(--dn)':'var(--gn)'}">${io}</div><div class="ksub">su ${(proj.issues||[]).length} totali</div></div>
-    <div class="kcard"><div class="klabel">Change Request</div><div class="kval">${(proj.changes||[]).length}</div><div class="ksub">${(proj.changes||[]).filter(x=>x.status==='In Valutazione').length} in valutazione</div></div>
+    <div class="kcard"><div class="klabel">Critical Path</div><div class="kval" style="color:${cpCount>0?'var(--dn)':'var(--gn)'}">${cpCount}</div><div class="ksub">attività CP</div></div>
   </div>
-  <div style="display:grid;grid-template-columns:250px 1fr;gap:18px">
+
+  <!-- Budget & Resources Row -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:20px">
+    <div class="kcard" style="padding-top:18px">
+      <div class="klabel">Budget Monetario</div>
+      <div class="kval" style="font-size:17px;margin-top:4px">${d.budgetMoney?'€'+Number(d.budgetMoney).toLocaleString('it-IT'):'—'}</div>
+    </div>
+    <div class="kcard" style="padding-top:18px">
+      <div class="klabel">Budget a Ore</div>
+      <div class="kval" style="font-size:17px;margin-top:4px">${bH>0?bH+'h':'—'}</div>
+      ${bH>0?`<div style="margin-top:8px"><div class="pbar" style="width:100%"><div class="pfill" style="width:${bHpct}%;background:${bHpct>90?'var(--dn)':bHpct>70?'var(--wn)':'var(--b5)'}"></div></div><div class="ksub" style="margin-top:4px">${totActual}h consumate (${bHpct}%)</div></div>`:''}
+    </div>
+    <div class="kcard" style="padding-top:18px">
+      <div class="klabel">Risorse Allocate</div>
+      <div class="kval" style="font-size:17px;margin-top:4px">${res.length>0?res.length+' risorse':'—'}</div>
+      ${res.length>0?`<div class="ksub">FTE tot: ${totFTE.toFixed(1)} · Ore pian: ${totPlanned}h</div>`:''}
+    </div>
+  </div>
+
+  <!-- Main grid: RAG + Milestone -->
+  <div style="display:grid;grid-template-columns:250px 1fr;gap:16px;margin-bottom:20px">
     <div class="card"><div class="banner"><h3>🚦 Status RAG</h3></div><table class="info-tbl">${ragR}</table></div>
     <div class="card"><div class="banner"><h3>🏁 Milestone</h3><button class="badd" onclick="editML('${proj.id}',-1)">＋ Aggiungi</button></div>
       ${!(d.milestones||[]).length?`<div class="empty" style="padding:22px"><p>Nessuna milestone</p></div>`:`
@@ -689,12 +824,45 @@ function rDash(proj,c,tb){
         <thead><tr><th>Milestone</th><th>Pianificata</th><th>Effettiva</th><th>Stato</th><th>Note</th><th></th></tr></thead>
         <tbody>${mlR}</tbody></table></div>`}
     </div>
+  </div>
+
+  <!-- Obiettivi, Assunzioni, MoSCoW, Meeting Notes -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+
+    ${(d.objectives||d.assumptions)?`<div class="card">
+      <div class="banner"><h3>🎯 Obiettivi & Assunzioni</h3></div>
+      <div style="padding:16px">
+        ${d.objectives?`<p style="font-size:11px;font-weight:700;color:var(--tm);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Obiettivi</p>${rtRender(d.objectives)}<div class="divider" style="margin:12px 0"></div>`:''}
+        ${d.assumptions?`<p style="font-size:11px;font-weight:700;color:var(--tm);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Assunzioni</p>${rtRender(d.assumptions)}`:''}
+      </div>
+    </div>`:''}
+
+    ${moscowHtml?`<div class="card">
+      <div class="banner"><h3>🗂 MoSCoW</h3></div>
+      <div style="padding:16px">${moscowHtml}</div>
+    </div>`:''}
+
+    ${mtgs.length>0?`<div class="card" style="grid-column:1/-1">
+      <div class="banner"><h3>📝 Ultime Note Meeting</h3><span class="badd" onclick="selSec('meetings')">Vedi tutte →</span></div>
+      <div style="padding:0">
+        ${mtgs.map(m=>`<div style="padding:14px 18px;border-bottom:1px solid var(--bd)">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            <span class="badge bg-blue">${m.date}</span>
+            <span style="font-weight:600;font-size:13.5px">${m.title||'Meeting'}</span>
+          </div>
+          <div class="rt-view" style="font-size:12.5px;color:var(--tm);max-height:80px;overflow:hidden">${m.content||''}</div>
+        </div>`).join('')}
+      </div>
+    </div>`:''}
+
   </div>`;
 }
+
 function editDash(pid){
   const d=activeProj().dashboard;const mid='mdash';
   const ro=v=>`<option value="">—</option>${['G','A','R'].map(x=>`<option value="${x}" ${v===x?'selected':''}>${x==='G'?'Verde':x==='A'?'Ambra':'Rosso'}</option>`).join('')}`;
-  $('modals').insertAdjacentHTML('beforeend',`<div class="mo" id="${mid}"><div class="modal mlg">
+  const msc=d.moscow||{};
+  $('modals').insertAdjacentHTML('beforeend',`<div class="mo" id="${mid}"><div class="modal mxl">
     <div class="mhd"><h2>Modifica Dashboard</h2><button class="cx" onclick="cm('${mid}')">✕</button></div>
     <div class="mbody">
       <div class="fg fg3" style="margin-bottom:16px">
@@ -703,6 +871,21 @@ function editDash(pid){
         <div class="field"><label>Fase</label><input type="text" id="d_ph" value="${d.phase||''}"/></div>
         <div class="field"><label>Data Inizio</label><input type="date" id="d_st" value="${d.start||''}"/></div>
         <div class="field"><label>Data Fine</label><input type="date" id="d_en" value="${d.end||''}"/></div>
+        <div class="field"><label>Budget Monetario (€)</label><input type="number" id="d_bm" value="${d.budgetMoney||''}"/></div>
+        <div class="field"><label>Budget a Ore (h)</label><input type="number" id="d_bh" value="${d.budgetHours||''}"/></div>
+      </div>
+      <div class="divider"></div>
+      <div class="fg fg2" style="margin-bottom:16px">
+        <div class="field"><label>Obiettivi</label>${rtEditor('d_obj',d.objectives||'','Inserisci gli obiettivi del progetto...')}</div>
+        <div class="field"><label>Assunzioni</label>${rtEditor('d_ass',d.assumptions||'','Inserisci le assunzioni chiave...')}</div>
+      </div>
+      <div class="divider"></div>
+      <p style="font-weight:700;font-family:var(--fd);margin-bottom:12px">MoSCoW</p>
+      <div class="fg fg2" style="margin-bottom:16px">
+        <div class="field"><label style="color:var(--dn)">Must Have</label>${rtEditor('d_must',msc.must||'','Requisiti imprescindibili...')}</div>
+        <div class="field"><label style="color:var(--wn)">Should Have</label>${rtEditor('d_should',msc.should||'','Importanti ma non critici...')}</div>
+        <div class="field"><label style="color:var(--acc)">Could Have</label>${rtEditor('d_could',msc.could||'','Desiderabili se ci sono risorse...')}</div>
+        <div class="field"><label style="color:var(--tm)">Won't Have</label>${rtEditor('d_wont',msc.wont||'','Esclusi esplicitamente da questo rilascio...')}</div>
       </div>
       <div class="divider"></div>
       <p style="font-weight:700;font-family:var(--fd);margin-bottom:12px">Status RAG</p>
@@ -719,7 +902,11 @@ function editDash(pid){
 }
 function saveDash(pid,mid){
   const proj=activeProj();
-  proj.dashboard={...proj.dashboard,pm:gv('d_pm'),sponsor:gv('d_sp'),phase:gv('d_ph'),start:gv('d_st'),end:gv('d_en'),
+  proj.dashboard={...proj.dashboard,
+    pm:gv('d_pm'),sponsor:gv('d_sp'),phase:gv('d_ph'),start:gv('d_st'),end:gv('d_en'),
+    budgetMoney:gv('d_bm'),budgetHours:gv('d_bh'),
+    objectives:rtValue('d_obj'),assumptions:rtValue('d_ass'),
+    moscow:{must:rtValue('d_must'),should:rtValue('d_should'),could:rtValue('d_could'),wont:rtValue('d_wont')},
     rag:{scope:gv('rs'),schedule:gv('rsc'),budget:gv('rb'),quality:gv('rq'),risks:gv('rr')}};
   save();cm(mid);rContent();toast('Dashboard aggiornata');
 }
@@ -758,18 +945,35 @@ function rCharter(proj,c,tb){
   tb.innerHTML=`<button class="btn btnp bsm" onclick="editCharter('${proj.id}')">✏ Modifica Charter</button>`;
   const sec=(title,rows)=>`<div class="card" style="margin-bottom:14px">
     <div class="banner"><h3>${title}</h3></div>
-    <table class="info-tbl">${rows.map(([l,v])=>`<tr><td>${l}</td><td>${v||'<span style="color:var(--tl);font-style:italic">—</span>'}</td></tr>`).join('')}</table></div>`;
+    <table class="info-tbl">${rows.map(([l,v,rt])=>`<tr><td>${l}</td><td>${rt?rtRender(v):v||'<span style="color:var(--tl);font-style:italic">—</span>'}</td></tr>`).join('')}</table></div>`;
+  const msc=ch.moscow||{};
+  const moscowHtml=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    ${[['Must Have','must','var(--dn)'],['Should Have','should','var(--wn)'],['Could Have','could','var(--acc)'],["Won't Have",'wont','var(--tm)']].map(([l,k,col])=>
+      `<div><p style="font-size:11px;font-weight:700;color:${col};text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px">${l}</p>${rtRender(msc[k])}</div>`
+    ).join('')}</div>`;
   c.innerHTML=`<div class="phd"><div><h1>Project Charter</h1><p>Documento di autorizzazione formale del progetto</p></div></div>`+
-    sec('1 · Informazioni Generali',[['Nome Progetto',ch.projectName],['Codice',ch.code],['Project Manager',ch.pm],['Sponsor',ch.sponsor],['Data Inizio',ch.start],['Data Fine Prevista',ch.end],['Budget Approvato',ch.budget?`€ ${Number(ch.budget).toLocaleString('it-IT')}`:'']])+
-    sec('2 · Obiettivi & Benefici',[['Obiettivo Principale',ch.objective],['Obiettivi Secondari',ch.secondaryObj],['Benefici Attesi',ch.benefits]])+
-    sec('3 · Scope',[['Incluso nel Progetto',ch.inScope],['Escluso dal Progetto',ch.outScope]])+
-    sec('4 · Vincoli, Assunzioni & Dipendenze',[['Vincoli',ch.constraints],['Assunzioni',ch.assumptions],['Dipendenze Esterne',ch.dependencies]])+
-    sec('5 · Stakeholder Chiave & Rischi Iniziali',[['Stakeholder Chiave',ch.stakeholders],['Rischi Principali Iniziali',ch.initialRisks]]);
+    sec('1 · Informazioni Generali',[
+      ['Nome Progetto',ch.projectName],['Codice',ch.code],['Project Manager',ch.pm],
+      ['Sponsor',ch.sponsor],['Data Inizio',ch.start],['Data Fine Prevista',ch.end],
+      ['Budget Monetario',ch.budget?`€ ${Number(ch.budget).toLocaleString('it-IT')}`:''],
+      ['Budget a Ore',ch.budgetHours?`${ch.budgetHours} ore`:''],
+    ].map(r=>[r[0],r[1],false]))+
+    sec('2 · Obiettivi & Benefici',[
+      ['Obiettivo Principale',ch.objective,true],['Obiettivi Secondari',ch.secondaryObj,true],['Benefici Attesi',ch.benefits,true]
+    ])+
+    `<div class="card" style="margin-bottom:14px"><div class="banner"><h3>3 · MoSCoW</h3></div><div style="padding:16px">${moscowHtml}</div></div>`+
+    sec('4 · Scope',[['Incluso nel Progetto',ch.inScope,true],['Escluso dal Progetto',ch.outScope,true]])+
+    sec('5 · Vincoli, Assunzioni & Dipendenze',[
+      ['Vincoli',ch.constraints,true],['Assunzioni',ch.assumptions,true],['Dipendenze Esterne',ch.dependencies,true]
+    ])+
+    sec('6 · Stakeholder Chiave & Rischi Iniziali',[
+      ['Stakeholder Chiave',ch.stakeholders,true],['Rischi Principali Iniziali',ch.initialRisks,true]
+    ]);
 }
 function editCharter(pid){
   const ch=activeProj().charter;const mid='mch';
   const fi=(id,l,v,t='text')=>`<div class="field"><label>${l}</label><input type="${t}" id="${id}" value="${(v||'').toString().replace(/"/g,'&quot;')}"/></div>`;
-  const ta=(id,l,v)=>`<div class="field"><label>${l}</label><textarea id="${id}">${v||''}</textarea></div>`;
+  const msc=ch.moscow||{};
   $('modals').insertAdjacentHTML('beforeend',`<div class="mo" id="${mid}"><div class="modal mxl">
     <div class="mhd"><h2>✏ Modifica Project Charter</h2><button class="cx" onclick="cm('${mid}')">✕</button></div>
     <div class="mbody">
@@ -777,31 +981,53 @@ function editCharter(pid){
         ${fi('ch_pn','Nome Progetto',ch.projectName)}${fi('ch_cd','Codice',ch.code)}
         ${fi('ch_pm','Project Manager',ch.pm)}${fi('ch_sp','Sponsor',ch.sponsor)}
         ${fi('ch_st','Data Inizio',ch.start,'date')}${fi('ch_en','Data Fine',ch.end,'date')}
-        ${fi('ch_bu','Budget (€)',ch.budget,'number')}
+        ${fi('ch_bu','Budget Monetario (€)',ch.budget,'number')}
+        ${fi('ch_bh','Budget a Ore (h)',ch.budgetHours,'number')}
       </div><div class="divider"></div>
-      <div class="fg">${ta('ch_ob','Obiettivo Principale',ch.objective)}${ta('ch_so','Obiettivi Secondari',ch.secondaryObj)}${ta('ch_be','Benefici Attesi',ch.benefits)}</div>
+      <div class="fg fg2" style="margin-bottom:16px">
+        <div class="field"><label>Obiettivo Principale</label>${rtEditor('ch_ob',ch.objective||'','Descrivi l obiettivo principale...')}</div>
+        <div class="field"><label>Obiettivi Secondari</label>${rtEditor('ch_so',ch.secondaryObj||'','Obiettivi secondari...')}</div>
+        <div class="field" style="grid-column:1/-1"><label>Benefici Attesi</label>${rtEditor('ch_be',ch.benefits||'','Benefici attesi...')}</div>
+      </div>
+      <div class="divider"></div>
+      <p style="font-weight:700;font-family:var(--fd);margin-bottom:12px">MoSCoW</p>
+      <div class="fg fg2" style="margin-bottom:16px">
+        <div class="field"><label style="color:var(--dn)">Must Have</label>${rtEditor('ch_must',msc.must||'')}</div>
+        <div class="field"><label style="color:var(--wn)">Should Have</label>${rtEditor('ch_should',msc.should||'')}</div>
+        <div class="field"><label style="color:var(--acc)">Could Have</label>${rtEditor('ch_could',msc.could||'')}</div>
+        <div class="field"><label style="color:var(--tm)">Won't Have</label>${rtEditor('ch_wont',msc.wont||'')}</div>
+      </div>
       <div class="divider"></div>
       <div class="fg fg2">
-        ${ta('ch_in','Incluso nel Progetto',ch.inScope)}${ta('ch_ou','Escluso dal Progetto',ch.outScope)}
-        ${ta('ch_co','Vincoli',ch.constraints)}${ta('ch_as','Assunzioni',ch.assumptions)}
-        ${ta('ch_de','Dipendenze Esterne',ch.dependencies)}${ta('ch_sh','Stakeholder Chiave',ch.stakeholders)}
-        ${ta('ch_ri','Rischi Iniziali',ch.initialRisks)}
+        <div class="field"><label>Incluso nel Progetto</label>${rtEditor('ch_in',ch.inScope||'')}</div>
+        <div class="field"><label>Escluso dal Progetto</label>${rtEditor('ch_ou',ch.outScope||'')}</div>
+        <div class="field"><label>Vincoli</label>${rtEditor('ch_co',ch.constraints||'')}</div>
+        <div class="field"><label>Assunzioni</label>${rtEditor('ch_as',ch.assumptions||'')}</div>
+        <div class="field"><label>Dipendenze Esterne</label>${rtEditor('ch_de',ch.dependencies||'')}</div>
+        <div class="field"><label>Stakeholder Chiave</label>${rtEditor('ch_sh',ch.stakeholders||'')}</div>
+        <div class="field" style="grid-column:1/-1"><label>Rischi Iniziali</label>${rtEditor('ch_ri',ch.initialRisks||'')}</div>
       </div>
     </div>
-    <div class="mft"><button class="btn btng" onclick="cm('${mid}')">Annulla</button><button class="btn btnp" onclick="saveCharter('${pid}','${mid}')">Salva</button></div>
+    <div class="mft"><button class="btn btng" onclick="cm('${mid}')">Annulla</button><button class="btn btnp" onclick="saveCharter('${pid}','${mid}')">Salva Charter</button></div>
   </div></div>`);
 }
 function saveCharter(pid,mid){
   const proj=activeProj();
-  proj.charter={projectName:gv('ch_pn'),code:gv('ch_cd'),pm:gv('ch_pm'),sponsor:gv('ch_sp'),start:gv('ch_st'),end:gv('ch_en'),budget:gv('ch_bu'),objective:gv('ch_ob'),secondaryObj:gv('ch_so'),benefits:gv('ch_be'),inScope:gv('ch_in'),outScope:gv('ch_ou'),constraints:gv('ch_co'),assumptions:gv('ch_as'),dependencies:gv('ch_de'),stakeholders:gv('ch_sh'),initialRisks:gv('ch_ri')};
+  proj.charter={projectName:gv('ch_pn'),code:gv('ch_cd'),pm:gv('ch_pm'),sponsor:gv('ch_sp'),
+    start:gv('ch_st'),end:gv('ch_en'),budget:gv('ch_bu'),budgetHours:gv('ch_bh'),
+    objective:rtValue('ch_ob'),secondaryObj:rtValue('ch_so'),benefits:rtValue('ch_be'),
+    moscow:{must:rtValue('ch_must'),should:rtValue('ch_should'),could:rtValue('ch_could'),wont:rtValue('ch_wont')},
+    inScope:rtValue('ch_in'),outScope:rtValue('ch_ou'),constraints:rtValue('ch_co'),
+    assumptions:rtValue('ch_as'),dependencies:rtValue('ch_de'),stakeholders:rtValue('ch_sh'),
+    initialRisks:rtValue('ch_ri')};
   save();cm(mid);rContent();toast('Project Charter salvato');
 }
 
 // ═══════════════════ LIST SECTIONS ════════════════════════════════════════════
 const LCFG={
   wbs:{t:'WBS – Work Breakdown Structure',d:'Struttura gerarchica delle attività del progetto',a:'Attività WBS',
-    cols:['Codice','Descrizione','Livello','Responsabile','Stimato','Effettivo','Avanzamento','Note'],
-    row:r=>[r.code||'—',r.description||'—',r.level?`<span class="badge bg-blue">L${r.level}</span>`:'—',r.owner||'—',r.estimatedDays?r.estimatedDays+'gg':'—',r.actualDays?r.actualDays+'gg':'—',r.completion?`<span style="display:inline-flex;align-items:center;gap:6px"><div class="pbar"><div class="pfill" style="width:${r.completion}%"></div></div><span style="font-size:12px">${r.completion}%</span></span>`:'—',r.note||'']},
+    cols:['Codice','Descrizione','Livello','Responsabile','Stimato','Effettivo','Avanzamento','CP','Note'],
+    row:r=>[r.code||'—',r.description||'—',r.level?`<span class="badge bg-blue">L${r.level}</span>`:'—',r.owner||'—',r.estimatedDays?r.estimatedDays+'gg':'—',r.actualDays?r.actualDays+'gg':'—',r.completion?`<span style="display:inline-flex;align-items:center;gap:6px"><div class="pbar"><div class="pfill" style="width:${r.completion}%"></div></div><span style="font-size:12px">${r.completion}%</span></span>`:'—',r.criticalPath?'<span class="badge bg-red" title="Critical Path">CP</span>':'—',r.note||'']},
   schedule:{t:'Schedule – Piano di Progetto',d:'Pianificazione attività con avanzamento e stato',a:'Attività',
     cols:['ID','Attività','WBS','Responsabile','Inizio','Fine','Durata','% Compl.','Stato','Dipendenze','Milestone'],
     row:r=>[r.id||'—',`<b>${r.name||'—'}</b>`,r.wbsRef||'—',r.owner||'—',r.start||'—',r.end||'—',(r.start&&r.end?Math.max(0,Math.round((new Date(r.end)-new Date(r.start))/864e5))+'gg':'—'),r.completion?r.completion+'%':'—',sB(r.status),r.deps?`<span style="font-size:12px;color:var(--tm)">${r.deps}</span>`:'—',r.milestone?`<span class="badge bg-indigo">⚑ Sì</span>`:'—']},
@@ -874,16 +1100,17 @@ const fi2=(id,l,v='',t='text')=>`<div class="field"><label>${l}</label><input ty
 const ta2=(id,l,v='')=>`<div class="field"><label>${l}</label><textarea id="${id}">${v||''}</textarea></div>`;
 const sel2=(id,l,opts,v='')=>`<div class="field"><label>${l}</label><select id="${id}">${opts.map(o=>`<option value="${o}" ${v===o?'selected':''}>${o||'—'}</option>`).join('')}</select></div>`;
 
-window.f_wbs=(r)=>`<div class="fg fg2">${fi2('fc','Codice WBS',r.code)}${sel2('fl','Livello',['','1','2','3'],r.level)}<div class="field" style="grid-column:1/-1"><label>DESCRIZIONE ATTIVITÀ</label><input type="text" id="fd" value="${(r.description||'').replace(/"/g,'&quot;')}"/></div>${fi2('fo','Responsabile',r.owner)}${fi2('fes','Effort Stimato (gg)',r.estimatedDays,'number')}${fi2('fea','Effort Effettivo (gg)',r.actualDays,'number')}${fi2('fcp','Completamento %',r.completion,'number')}${ta2('fn','Note / Deliverable',r.note)}</div>`;
-window.c_wbs=()=>({code:gv('fc'),level:gv('fl'),description:gv('fd'),owner:gv('fo'),estimatedDays:gv('fes'),actualDays:gv('fea'),completion:gv('fcp'),note:gv('fn')});
+window.f_wbs=(r)=>`<div class="fg fg2">${fi2('fc','Codice WBS',r.code)}${sel2('fl','Livello',['','1','2','3'],r.level)}<div class="field" style="grid-column:1/-1"><label>DESCRIZIONE ATTIVITÀ</label><input type="text" id="fd" value="${(r.description||'').replace(/"/g,'&quot;')}"/></div>${fi2('fo','Responsabile',r.owner)}${fi2('fes','Effort Stimato (gg)',r.estimatedDays,'number')}${fi2('fea','Effort Effettivo (gg)',r.actualDays,'number')}${fi2('fcp','Completamento %',r.completion,'number')}<div class="field"><label>Critical Path</label><label style="display:flex;align-items:center;gap:8px;margin-top:4px;cursor:pointer"><input type="checkbox" id="fcp2" ${r.criticalPath?'checked':''} style="width:16px;height:16px;accent-color:var(--dn)"/><span style="font-size:13px">Questa attività è sul Critical Path</span></label></div>${ta2('fn','Note / Deliverable',r.note)}</div>`;
+window.c_wbs=()=>({code:gv('fc'),level:gv('fl'),description:gv('fd'),owner:gv('fo'),estimatedDays:gv('fes'),actualDays:gv('fea'),completion:gv('fcp'),criticalPath:document.getElementById('fcp2')?.checked||false,note:gv('fn')});
 
 window.f_schedule=(r,proj)=>{
-  // Costruisce lista ID attività disponibili per le dipendenze
   const otherIds=(proj.schedule||[]).filter(x=>x.id&&x.id!==r.id).map(x=>x.id+'  ('+x.name+')').join(', ');
   const hint=otherIds?`<p style="font-size:11px;color:var(--tl);margin-top:4px">ID disponibili: ${otherIds}</p>`:'';
-  return`<div class="fg fg2">${fi2('fid','ID',r.id)}${fi2('fwr','WBS Ref',r.wbsRef)}<div class="field" style="grid-column:1/-1"><label>NOME ATTIVITÀ</label><input type="text" id="fnm" value="${(r.name||'').replace(/"/g,'&quot;')}"/></div>${fi2('fo','Responsabile',r.owner)}${fi2('fst','Data Inizio',r.start,'date')}${fi2('fen','Data Fine',r.end,'date')}${fi2('fcp','% Completamento',r.completion,'number')}${sel2('fss','Stato',['','In Attesa','In Corso','Completata','Rinviata','Bloccata'],r.status)}<div class="field"><label>Dipendenze (ID separati da virgola)</label><input type="text" id="fdeps" value="${(r.deps||'').replace(/"/g,'&quot;')}"/>${hint}</div>${sel2('fml','Milestone?',['','Sì','No'],r.milestone?'Sì':'No')}${ta2('fno','Note',r.note)}</div>`;
-};
-window.c_schedule=()=>({id:gv('fid'),name:gv('fnm'),wbsRef:gv('fwr'),owner:gv('fo'),start:gv('fst'),end:gv('fen'),completion:gv('fcp'),status:gv('fss'),deps:gv('fdeps'),milestone:gv('fml')==='Sì',note:gv('fno')});
+  // CP sync from WBS: se WBS ref ha CP, pre-check
+  const wbsHasCp=(proj.wbs||[]).find(w=>w.code===r.wbsRef&&w.criticalPath);
+  return`<div class="fg fg2">${fi2('fid','ID',r.id)}${fi2('fwr','WBS Ref',r.wbsRef)}<div class="field" style="grid-column:1/-1"><label>NOME ATTIVITÀ</label><input type="text" id="fnm" value="${(r.name||'').replace(/"/g,'&quot;')}"/></div>${fi2('fo','Responsabile',r.owner)}${fi2('fst','Data Inizio',r.start,'date')}${fi2('fen','Data Fine',r.end,'date')}${fi2('fpc','% Completamento',r.completion,'number')}${sel2('fss','Stato',['','In Attesa','In Corso','Completata','Rinviata','Bloccata'],r.status)}${sel2('fml','Milestone?',['','Sì','No'],r.milestone?'Sì':'No')}<div class="field"><label>Dipendenze <span style="font-weight:400;text-transform:none;font-size:11px">(ID separati da virgola)</span></label><input type="text" id="fdeps" value="${(r.deps||'').replace(/"/g,'&quot;')}"/>${hint}</div><div class="field"><label>Critical Path</label><label style="display:flex;align-items:center;gap:8px;margin-top:4px;cursor:pointer"><input type="checkbox" id="fcpf" ${(r.criticalPath||wbsHasCp)?'checked':''} style="width:16px;height:16px;accent-color:var(--dn)"/><span style="font-size:13px">Attività sul Critical Path ${wbsHasCp?'<span class=\"badge bg-red\" style=\"margin-left:4px\">Da WBS</span>':''}</span></label></div>${ta2('fno','Note',r.note)}</div>`;
+}
+window.c_schedule=()=>({id:gv('fid'),name:gv('fnm'),wbsRef:gv('fwr'),owner:gv('fo'),start:gv('fst'),end:gv('fen'),completion:gv('fpc'),status:gv('fss'),milestone:gv('fml')==='Sì',deps:gv('fdeps'),criticalPath:document.getElementById('fcpf')?.checked||false,note:gv('fno')});
 
 window.f_risks=(r)=>`<div class="fg fg2">${fi2('fid','ID',r.id)}${fi2('fdt','Data',r.date,'date')}${sel2('fca','Categoria',['','Tecnico','Organizzativo','Finanziario','Legale','Qualità','Risorse','Esterno'],r.category)}<div class="field" style="grid-column:1/-1"><label>DESCRIZIONE RISCHIO</label><textarea id="fde">${r.description||''}</textarea></div>${sel2('fpr','Probabilità (1-3)',['','1','2','3'],r.prob)}${sel2('fim','Impatto (1-3)',['','1','2','3'],r.impact)}${sel2('fre','Risposta',['','Evitare','Mitigare','Trasferire','Accettare'],r.response)}${fi2('fow','Risk Owner',r.owner)}${sel2('fst','Stato',['','Identificato','In Monitoraggio','Mitigato','Accettato','Chiuso'],r.status)}${ta2('fno','Piano Contingenza / Note',r.note)}</div>`;
 window.c_risks=()=>({id:gv('fid'),date:gv('fdt'),category:gv('fca'),description:gv('fde'),prob:gv('fpr'),impact:gv('fim'),response:gv('fre'),owner:gv('fow'),status:gv('fst'),note:gv('fno')});
@@ -901,6 +1128,99 @@ window.f_lessons=(r)=>`<div class="fg fg2">${fi2('fid','ID',r.id)}${fi2('fdt','D
 window.c_lessons=()=>({id:gv('fid'),date:gv('fdt'),phase:gv('fph'),category:gv('fca'),situation:gv('fsi'),positive:gv('fpo'),negative:gv('fne'),recommendation:gv('frc'),priority:gv('fpr'),owner:gv('fow')});
 
 // ═══════════════════ RACI ════════════════════════════════════════════════════
+
+// ══════════ RESOURCE PLANNING ════════════════════════════════════════════
+function rResources(proj,c,tb){
+  const res=proj.resources||[];
+  tb.innerHTML=`<button class="btn btnp bsm" onclick="openResModal('${proj.id}',-1)">＋ Aggiungi Risorsa</button>`;
+
+  const totFTE=res.reduce((s,r)=>s+(parseFloat(r.fte)||0),0).toFixed(2);
+  const totPl=res.reduce((s,r)=>s+(parseFloat(r.plannedHours)||0),0);
+  const totAc=res.reduce((s,r)=>s+(parseFloat(r.actualHours)||0),0);
+  const pct=totPl>0?Math.min(100,Math.round(totAc/totPl*100)):0;
+
+  const rows=res.map((r,i)=>{
+    const pl=parseFloat(r.plannedHours)||0;
+    const ac=parseFloat(r.actualHours)||0;
+    const rPct=pl>0?Math.min(100,Math.round(ac/pl*100)):0;
+    const overBudget=ac>pl&&pl>0;
+    return`<tr>
+      <td style="font-weight:600">${r.name||'—'}</td>
+      <td>${r.role||'—'}</td>
+      <td style="text-align:center"><span class="badge bg-blue">${r.fte||'—'} FTE</span></td>
+      <td>${pl>0?pl+'h':'—'}</td>
+      <td style="${overBudget?'color:var(--dn);font-weight:700':''}">
+        ${ac>0?ac+'h':'—'}
+        ${pl>0?`<div style="margin-top:4px"><div class="pbar" style="width:80px"><div class="pfill" style="width:${rPct}%;background:${overBudget?'var(--dn)':''}"></div></div></div>`:''}
+      </td>
+      <td style="color:${overBudget?'var(--dn)':'var(--gn)'}">
+        ${pl>0&&ac>0?(overBudget?'+':'')+(ac-pl)+'h ('+rPct+'%)':'—'}
+      </td>
+      <td>${r.note||''}</td>
+      <td><div class="ac">
+        <button class="reb" onclick="openResModal('${proj.id}',${i})">Modifica</button>
+        <button class="deb" onclick="delRes('${proj.id}',${i})">✕</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+
+  c.innerHTML=`<div class="phd"><div><h1>Resource Planning</h1><p>Allocazione risorse, FTE e ore pianificate vs consumate</p></div></div>
+
+  <div class="kgrid" style="grid-template-columns:repeat(auto-fill,minmax(155px,1fr));margin-bottom:20px">
+    <div class="kcard"><div class="klabel">Risorse Totali</div><div class="kval">${res.length}</div></div>
+    <div class="kcard"><div class="klabel">FTE Totale</div><div class="kval">${totFTE}</div></div>
+    <div class="kcard"><div class="klabel">Ore Pianificate</div><div class="kval" style="font-size:18px">${totPl}h</div></div>
+    <div class="kcard"><div class="klabel">Ore Consumate</div><div class="kval" style="font-size:18px;color:${pct>90?'var(--dn)':pct>70?'var(--wn)':'var(--tx)'}">${totAc}h</div>
+      <div style="margin-top:6px"><div class="pbar" style="width:100%"><div class="pfill" style="width:${pct}%;background:${pct>90?'var(--dn)':pct>70?'var(--wn)':''}"></div></div><div class="ksub">${pct}% del budget ore</div></div>
+    </div>
+    <div class="kcard"><div class="klabel">Rimanenti</div><div class="kval" style="font-size:18px;color:${totPl-totAc<0?'var(--dn)':'var(--gn)'}">${totPl-totAc}h</div></div>
+  </div>
+
+  <div class="tw"><table>
+    <thead><tr><th>Nome</th><th>Ruolo</th><th>FTE</th><th>Ore Pianificate</th><th>Ore Consumate</th><th>Delta</th><th>Note</th><th>Azioni</th></tr></thead>
+    <tbody>${rows||`<tr><td colspan="8" style="text-align:center;padding:26px;color:var(--tl);font-style:italic">Nessuna risorsa. Clicca "＋ Aggiungi Risorsa".</td></tr>`}</tbody>
+  </table></div>`;
+}
+
+function openResModal(pid,idx){
+  const proj=wsProjects().find(p=>p.id===pid);
+  if(!proj.resources)proj.resources=[];
+  const isN=idx===-1;
+  const r=isN?{}:{...proj.resources[idx]};
+  const mid='mres';
+  $('modals').insertAdjacentHTML('beforeend',`<div class="mo" id="${mid}"><div class="modal mmd">
+    <div class="mhd"><h2>${isN?'Aggiungi':'Modifica'} Risorsa</h2><button class="cx" onclick="cm('${mid}')">✕</button></div>
+    <div class="mbody"><div class="fg fg2">
+      <div class="field"><label>Nome Risorsa</label><input type="text" id="rn_name" value="${(r.name||'').replace(/"/g,'&quot;')}"/></div>
+      <div class="field"><label>Ruolo / Profilo</label><input type="text" id="rn_role" value="${(r.role||'').replace(/"/g,'&quot;')}"/></div>
+      <div class="field"><label>FTE (es. 0.5 = part-time)</label><input type="number" id="rn_fte" step="0.1" min="0" max="3" value="${r.fte||''}"/></div>
+      <div class="field"><label>Ore Pianificate a Progetto</label><input type="number" id="rn_pl" value="${r.plannedHours||''}"/></div>
+      <div class="field"><label>Ore Consumate (aggiorna periodicamente)</label><input type="number" id="rn_ac" value="${r.actualHours||''}"/></div>
+      <div class="field"><label>Costo Orario (€/h)</label><input type="number" id="rn_rate" value="${r.hourlyRate||''}"/></div>
+      <div class="field" style="grid-column:1/-1"><label>Note</label><input type="text" id="rn_note" value="${(r.note||'').replace(/"/g,'&quot;')}"/></div>
+    </div>
+    <div style="margin-top:12px;padding:12px;background:var(--b0);border:1px solid var(--b2);border-radius:var(--rs);font-size:12px;color:var(--tm)">
+      <b style="color:var(--acc)">Costo stimato:</b> se inserisci Costo Orario × Ore Pianificate potrai vedere il budget monetario per risorsa.
+    </div></div>
+    <div class="mft"><button class="btn btng" onclick="cm('${mid}')">Annulla</button>
+      <button class="btn btnp" onclick="saveRes('${pid}',${idx},'${mid}')">Salva</button></div>
+  </div></div>`);
+}
+function saveRes(pid,idx,mid){
+  const proj=wsProjects().find(p=>p.id===pid);
+  if(!proj.resources)proj.resources=[];
+  const r={name:gv('rn_name'),role:gv('rn_role'),fte:gv('rn_fte'),plannedHours:gv('rn_pl'),actualHours:gv('rn_ac'),hourlyRate:gv('rn_rate'),note:gv('rn_note')};
+  if(idx===-1)proj.resources.push(r);else proj.resources[idx]=r;
+  save();cm(mid);rContent();toast('Risorsa salvata');
+}
+function delRes(pid,idx){
+  cdel('Eliminare questa risorsa?',()=>{
+    wsProjects().find(p=>p.id===pid).resources.splice(idx,1);
+    save();rContent();toast('Eliminato','🗑');
+  });
+}
+
+
 function rRaci(proj,c,tb){
   const raci=proj.raci||{roles:[],activities:[]};
   tb.innerHTML=`<button class="btn btng bsm" onclick="editRaciRoles('${proj.id}')">⚙ Ruoli</button><button class="btn btnp bsm" onclick="addRaciAct('${proj.id}')">＋ Aggiungi Attività</button>`;
@@ -974,64 +1294,138 @@ function delRaciAct(pid,idx){
 function rBudget(proj,c,tb){
   const items=proj.budget||[];
   tb.innerHTML=`<button class="btn btnp bsm" onclick="openBM('${proj.id}',-1)">＋ Aggiungi Voce</button>`;
-  const tPV=items.reduce((s,r)=>s+(parseFloat(r.pv)||0),0);
-  const tEV=items.reduce((s,r)=>s+(parseFloat(r.ev)||0),0);
-  const tAC=items.reduce((s,r)=>s+(parseFloat(r.ac)||0),0);
-  const tB=items.reduce((s,r)=>s+(parseFloat(r.budget)||0),0);
-  const cpi=tAC?tEV/tAC:null,spi=tPV?tEV/tPV:null,cv=tEV-tAC,sv=tEV-tPV;
+
+  const sum=k=>items.reduce((s,r)=>s+(parseFloat(r[k])||0),0);
+  const tB=sum('budget_h'),tPV=sum('pv_h'),tEV=sum('ev_h'),tAC=sum('ac_h');
+  const cv=tEV-tAC, sv=tEV-tPV;
+  const cpi=tAC?tEV/tAC:null, spi=tPV?tEV/tPV:null;
   const kc=v=>v===null?'var(--tm)':v>=1?'var(--gn)':v>=0.8?'var(--wn)':'var(--dn)';
-  const eur=v=>(v===null||isNaN(v))?'—':'€'+parseFloat(v).toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2});
-  const idx2=v=>v===null?'—':v.toFixed(2);
+  const i2=v=>v===null?'—':v.toFixed(2);
+  const h=v=>(isNaN(v)||v===null||v==='')?'—':parseFloat(v).toFixed(1)+'h';
+
   const rows=items.map((r,i)=>{
-    const pv=parseFloat(r.pv)||0,ev=parseFloat(r.ev)||0,ac=parseFloat(r.ac)||0;
-    const rcpi=ac?ev/ac:null,rspi=pv?ev/pv:null,rcv=ev-ac,rsv=ev-pv;
+    const pv=parseFloat(r.pv_h)||0,ev=parseFloat(r.ev_h)||0,ac=parseFloat(r.ac_h)||0;
+    const rcv=ev-ac,rsv=ev-pv;
+    const rcpi=ac?ev/ac:null,rspi=pv?ev/pv:null;
     const sc=v=>v===null?'':v>=1?'color:var(--gn);font-weight:700':'color:var(--dn);font-weight:700';
     return`<tr>
-      <td style="font-weight:600">${r.wbs||'—'}</td><td>${r.owner||'—'}</td>
-      <td>${eur(r.budget)}</td><td>${eur(pv)}</td><td>${eur(ev)}</td><td>${eur(ac)}</td>
-      <td style="${rcv>=0?'color:var(--gn);font-weight:600':'color:var(--dn);font-weight:600'}">${eur(rcv)}</td>
-      <td style="${rsv>=0?'color:var(--gn);font-weight:600':'color:var(--dn);font-weight:600'}">${eur(rsv)}</td>
-      <td style="${sc(rcpi)}">${idx2(rcpi)}</td><td style="${sc(rspi)}">${idx2(rspi)}</td>
+      <td style="font-weight:600">${r.wbs||'—'}</td>
+      <td>${r.owner||'—'}</td>
+      <td>${h(r.budget_h)}</td>
+      <td>${h(pv)}</td>
+      <td>${h(ev)}</td>
+      <td>${h(ac)}</td>
+      <td style="${rcv>=0?'color:var(--gn);font-weight:600':'color:var(--dn);font-weight:600'}">${h(rcv)}</td>
+      <td style="${rsv>=0?'color:var(--gn);font-weight:600':'color:var(--dn);font-weight:600'}">${h(rsv)}</td>
+      <td style="${sc(rcpi)}">${i2(rcpi)}</td>
+      <td style="${sc(rspi)}">${i2(rspi)}</td>
       <td>${r.completion?r.completion+'%':'—'}</td>
-      <td><div class="ac"><button class="reb" onclick="openBM('${proj.id}',${i})">Modifica</button><button class="deb" onclick="delBI('${proj.id}',${i})">✕</button></div></td></tr>`;}).join('');
-  c.innerHTML=`<div class="phd"><div><h1>Budget & EVM</h1><p>Earned Value Management · PV / EV / AC · CPI / SPI</p></div></div>
-  <div class="kgrid" style="grid-template-columns:repeat(auto-fill,minmax(140px,1fr))">
-    <div class="kcard"><div class="klabel">Budget Approvato</div><div class="kval" style="font-size:15px;margin-top:4px">${eur(tB)}</div></div>
-    <div class="kcard"><div class="klabel">PV – Planned</div><div class="kval" style="font-size:15px;margin-top:4px">${eur(tPV)}</div></div>
-    <div class="kcard"><div class="klabel">EV – Earned</div><div class="kval" style="font-size:15px;margin-top:4px">${eur(tEV)}</div></div>
-    <div class="kcard"><div class="klabel">AC – Actual</div><div class="kval" style="font-size:15px;margin-top:4px">${eur(tAC)}</div></div>
-    <div class="kcard"><div class="klabel">CV = EV − AC</div><div class="kval" style="font-size:17px;color:${cv>=0?'var(--gn)':'var(--dn)'};margin-top:4px">${eur(cv)}</div><div class="ksub">${cv>=0?'⬇ Sotto budget':'⬆ Over budget'}</div></div>
-    <div class="kcard"><div class="klabel">SV = EV − PV</div><div class="kval" style="font-size:17px;color:${sv>=0?'var(--gn)':'var(--dn)'};margin-top:4px">${eur(sv)}</div><div class="ksub">${sv>=0?'⬆ In anticipo':'⬇ In ritardo'}</div></div>
-    <div class="kcard"><div class="klabel">CPI = EV / AC</div><div class="kval" style="color:${kc(cpi)};margin-top:4px">${idx2(cpi)}</div><div class="ksub">Target ≥ 1.0</div></div>
-    <div class="kcard"><div class="klabel">SPI = EV / PV</div><div class="kval" style="color:${kc(spi)};margin-top:4px">${idx2(spi)}</div><div class="ksub">Target ≥ 1.0</div></div>
+      <td><div class="ac">
+        <button class="reb" onclick="openBM('${proj.id}',${i})">Modifica</button>
+        <button class="deb" onclick="delBI('${proj.id}',${i})">✕</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+
+  const kk=(label,val,sub,col)=>`<div class="kcard">
+    <div class="klabel">${label}</div>
+    <div class="kval" style="font-size:18px;margin-top:4px;color:${col||'var(--tx)'}">
+      ${val}
+    </div>
+    ${sub?`<div class="ksub">${sub}</div>`:''}
+  </div>`;
+
+  c.innerHTML=`<div class="phd"><div><h1>Budget & EVM</h1>
+    <p>Earned Value Management · basato su ore (h) · PV / EV / AC · CPI / SPI</p>
+  </div></div>
+
+  <div class="kgrid" style="grid-template-columns:repeat(auto-fill,minmax(145px,1fr))">
+    ${kk('Budget (h)',h(tB),'ore approvate')}
+    ${kk('PV – Planned',h(tPV),'ore pianificate')}
+    ${kk('EV – Earned',h(tEV),'ore guadagnate')}
+    ${kk('AC – Actual',h(tAC),'ore consumate')}
+    ${kk('CV = EV − AC',h(cv),cv>=0?'Sotto budget':'Over budget',cv>=0?'var(--gn)':'var(--dn)')}
+    ${kk('SV = EV − PV',h(sv),sv>=0?'In anticipo':'In ritardo',sv>=0?'var(--gn)':'var(--dn)')}
+    ${kk('CPI = EV / AC',i2(cpi),'Target ≥ 1.0',kc(cpi))}
+    ${kk('SPI = EV / PV',i2(spi),'Target ≥ 1.0',kc(spi))}
   </div>
+
   <div class="tw"><table>
-    <thead><tr><th>WBS / Fase</th><th>Responsabile</th><th>Budget</th><th>PV</th><th>EV</th><th>AC</th><th>CV</th><th>SV</th><th>CPI</th><th>SPI</th><th>% Compl.</th><th>Azioni</th></tr></thead>
-    <tbody>${rows||`<tr><td colspan="12" style="text-align:center;padding:24px;color:var(--tl);font-style:italic">Nessuna voce. Clicca "＋ Aggiungi Voce".</td></tr>`}</tbody>
+    <thead><tr>
+      <th>WBS / Fase</th><th>Responsabile</th>
+      <th>Budget (h)</th><th>PV (h)</th><th>EV (h)</th><th>AC (h)</th>
+      <th>CV (h)</th><th>SV (h)</th><th>CPI</th><th>SPI</th>
+      <th>% Compl.</th><th>Azioni</th>
+    </tr></thead>
+    <tbody>${rows||`<tr><td colspan="12" style="text-align:center;padding:24px;
+      color:var(--tl);font-style:italic">Nessuna voce di budget.</td></tr>`}</tbody>
   </table></div>`;
 }
+
 function openBM(pid,idx){
-  const proj=wsProjects().find(p=>p.id===pid);const isN=idx===-1;const r=isN?{}:proj.budget[idx];const mid='mbm';
-  $('modals').insertAdjacentHTML('beforeend',`<div class="mo" id="${mid}"><div class="modal mlg">
-    <div class="mhd"><h2>${isN?'Aggiungi':'Modifica'} Voce Budget</h2><button class="cx" onclick="cm('${mid}')">✕</button></div>
-    <div class="mbody"><div class="fg fg2">
-      ${fi2('bw','WBS / Fase',r.wbs)}${fi2('bo','Responsabile',r.owner)}
-      ${fi2('bb','Budget Approvato (€)',r.budget,'number')}${fi2('bcp','% Completamento',r.completion,'number')}
-      ${fi2('bpv','PV – Planned Value (€)',r.pv,'number')}${fi2('bev','EV – Earned Value (€)',r.ev,'number')}
-      ${fi2('bac','AC – Actual Cost (€)',r.ac,'number')}${ta2('bno','Note',r.note)}
+  const proj=wsProjects().find(p=>p.id===pid);
+  const isN=idx===-1;
+  const r=isN?{}:proj.budget[idx];
+  const mid='mbm';
+  $('modals').insertAdjacentHTML('beforeend',`<div class="mo" id="${mid}"><div class="modal mmd">
+    <div class="mhd"><h2>${isN?'Aggiungi':'Modifica'} Voce Budget</h2>
+      <button class="cx" onclick="cm('${mid}')">✕</button>
     </div>
-    <div style="margin-top:12px;padding:12px;background:var(--b0);border-radius:var(--rs);border:1px solid var(--b2);font-size:12px;color:var(--tm)">
-      <b style="color:var(--acc)">Formule EVM (auto):</b> CV = EV − AC · SV = EV − PV · CPI = EV / AC · SPI = EV / PV
-    </div></div>
-    <div class="mft"><button class="btn btng" onclick="cm('${mid}')">Annulla</button><button class="btn btnp" onclick="saveBI('${pid}',${idx},'${mid}')">Salva</button></div>
+    <div class="mbody">
+      <div class="fg fg2" style="margin-bottom:14px">
+        <div class="field" style="grid-column:1/-1">
+          <label>WBS / Fase</label>
+          <input type="text" id="bw" value="${(r.wbs||'').replace(/"/g,'&quot;')}"/>
+        </div>
+        <div class="field"><label>Responsabile</label>
+          <input type="text" id="bo" value="${(r.owner||'').replace(/"/g,'&quot;')}"/>
+        </div>
+        <div class="field"><label>% Completamento</label>
+          <input type="number" id="bcp" value="${r.completion||''}"/>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <p style="font-weight:700;font-family:var(--fd);margin-bottom:12px">⏱ EVM a Ore (h)</p>
+      <div class="fg fg2" style="margin-bottom:14px">
+        <div class="field"><label>Budget Ore (h)</label>
+          <input type="number" id="bb_h" value="${r.budget_h||''}"/>
+        </div>
+        <div class="field"><label>PV – Planned Value (h)</label>
+          <input type="number" id="bpv_h" value="${r.pv_h||''}"/>
+        </div>
+        <div class="field"><label>EV – Earned Value (h)</label>
+          <input type="number" id="bev_h" value="${r.ev_h||''}"/>
+        </div>
+        <div class="field"><label>AC – Actual Cost (h)</label>
+          <input type="number" id="bac_h" value="${r.ac_h||''}"/>
+        </div>
+      </div>
+      <div class="fg" style="margin-bottom:0">${ta2('bno','Note',r.note)}</div>
+      <div style="margin-top:12px;padding:12px;background:var(--b0);border:1px solid var(--b2);
+        border-radius:var(--rs);font-size:12px;color:var(--tm)">
+        <b style="color:var(--acc)">Formule EVM (calcolate in automatico):</b>
+        CV = EV − AC &nbsp;·&nbsp; SV = EV − PV &nbsp;·&nbsp;
+        CPI = EV / AC &nbsp;·&nbsp; SPI = EV / PV
+      </div>
+    </div>
+    <div class="mft">
+      <button class="btn btng" onclick="cm('${mid}')">Annulla</button>
+      <button class="btn btnp" onclick="saveBI('${pid}',${idx},'${mid}')">Salva</button>
+    </div>
   </div></div>`);
 }
+
 function saveBI(pid,idx,mid){
-  const proj=wsProjects().find(p=>p.id===pid);if(!proj.budget)proj.budget=[];
-  const item={wbs:gv('bw'),owner:gv('bo'),budget:gv('bb'),pv:gv('bpv'),ev:gv('bev'),ac:gv('bac'),completion:gv('bcp'),note:gv('bno')};
+  const proj=wsProjects().find(p=>p.id===pid);
+  if(!proj.budget)proj.budget=[];
+  const item={
+    wbs:gv('bw'),owner:gv('bo'),completion:gv('bcp'),note:gv('bno'),
+    budget_h:gv('bb_h'),pv_h:gv('bpv_h'),ev_h:gv('bev_h'),ac_h:gv('bac_h')
+  };
   if(idx===-1)proj.budget.push(item);else proj.budget[idx]=item;
   save();cm(mid);rContent();toast('Voce budget salvata');
 }
+
 function delBI(pid,idx){
   cdel('Eliminare questa voce budget?',()=>{
     wsProjects().find(p=>p.id===pid).budget.splice(idx,1);
@@ -1627,6 +2021,97 @@ window.addEventListener('beforeunload',function(e){
     e.returnValue='Hai modifiche non salvate. Sei sicuro di voler uscire?';
   }
 });
+
+
+// ══════════ MEETING NOTES ════════════════════════════════════════════════
+function rMeetings(proj,c,tb){
+  const mtgs=(proj.meetings||[]).slice().sort((a,b)=>b.date.localeCompare(a.date));
+  tb.innerHTML=`<button class="btn btnp bsm" onclick="openMtgModal('${proj.id}',-1)">＋ Nuova Nota Meeting</button>`;
+
+  if(!mtgs.length){
+    c.innerHTML=`<div class="phd"><div><h1>Meeting Notes</h1><p>Note dei meeting di progetto</p></div></div>
+      <div class="empty"><div class="empty-icon">📝</div><p>Nessuna nota. Clicca "＋ Nuova Nota Meeting" per iniziare.</p></div>`;
+    return;
+  }
+
+  // Dropdown selezione meeting
+  const selOpts=mtgs.map((m,i)=>`<option value="${i}">${m.date} — ${m.title||'Meeting'}</option>`).join('');
+  const selectedIdx=window._mtgSelIdx||0;
+  const sel=mtgs[selectedIdx]||mtgs[0];
+
+  c.innerHTML=`<div class="phd"><div><h1>Meeting Notes</h1><p>${mtgs.length} meeting documentat${mtgs.length===1?'o':'i'}</p></div></div>
+  <div style="display:grid;grid-template-columns:280px 1fr;gap:20px;align-items:start">
+    <!-- Lista meeting -->
+    <div class="card">
+      <div class="banner"><h3>📋 Meeting</h3></div>
+      <div style="padding:8px">
+        ${mtgs.map((m,i)=>`<div onclick="selMtg(${i})" style="padding:10px 12px;border-radius:var(--rs);cursor:pointer;margin-bottom:4px;background:${i===selectedIdx?'var(--sa)':'transparent'};color:${i===selectedIdx?'#fff':'var(--tx)'};transition:background .15s">
+          <div style="font-weight:600;font-size:13px">${m.title||'Meeting'}</div>
+          <div style="font-size:11.5px;opacity:.75;margin-top:2px">${m.date||'—'}</div>
+        </div>`).join('')}
+      </div>
+    </div>
+    <!-- Contenuto meeting selezionato -->
+    <div class="card">
+      <div class="banner">
+        <h3>${sel.date||'—'} — ${sel.title||'Meeting'}</h3>
+        <span class="badd" onclick="openMtgModal('${proj.id}',${selectedIdx})">✏ Modifica</span>
+        <span class="badd" style="margin-left:4px" onclick="delMtg('${proj.id}',${selectedIdx})">✕</span>
+      </div>
+      <div style="padding:20px">
+        ${sel.attendees?`<p style="font-size:11px;font-weight:700;color:var(--tm);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Partecipanti</p><p style="font-size:13px;margin-bottom:14px">${sel.attendees}</p>`:''}
+        <div class="rt-view">${sel.content||'<span style="color:var(--tl);font-style:italic">Nessun contenuto</span>'}</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function selMtg(idx){
+  window._mtgSelIdx=idx;
+  rContent();
+}
+
+function openMtgModal(pid,idx){
+  const proj=wsProjects().find(p=>p.id===pid);
+  if(!proj.meetings)proj.meetings=[];
+  const isN=idx===-1;
+  const m=isN?{date:new Date().toISOString().slice(0,10),title:'',attendees:'',content:''}:{...proj.meetings[idx]};
+  const mid='mmtg';
+  $('modals').insertAdjacentHTML('beforeend',`<div class="mo" id="${mid}"><div class="modal mxl">
+    <div class="mhd"><h2>${isN?'Nuova':'Modifica'} Nota Meeting</h2><button class="cx" onclick="cm('${mid}')">✕</button></div>
+    <div class="mbody">
+      <div class="fg fg2" style="margin-bottom:16px">
+        <div class="field"><label>Data Meeting</label><input type="date" id="mt_date" value="${m.date||''}"/></div>
+        <div class="field"><label>Titolo / Oggetto</label><input type="text" id="mt_title" value="${(m.title||'').replace(/"/g,'&quot;')}" placeholder="es. Sprint Review, Steering Committee..."/></div>
+        <div class="field" style="grid-column:1/-1"><label>Partecipanti</label><input type="text" id="mt_att" value="${(m.attendees||'').replace(/"/g,'&quot;')}" placeholder="es. Mario Rossi, Anna Verdi..."/></div>
+      </div>
+      <div class="field">
+        <label>Note del Meeting</label>
+        ${rtEditor('mt_content',m.content||'','• Scrivi qui le note del meeting...\n• Usa i bottoni per formattare\n• Puoi usare elenchi puntati e numerati')}
+      </div>
+    </div>
+    <div class="mft"><button class="btn btng" onclick="cm('${mid}')">Annulla</button>
+      <button class="btn btnp" onclick="saveMtg('${pid}',${idx},'${mid}')">Salva Note</button></div>
+  </div></div>`);
+}
+
+function saveMtg(pid,idx,mid){
+  const proj=wsProjects().find(p=>p.id===pid);
+  if(!proj.meetings)proj.meetings=[];
+  const m={date:gv('mt_date'),title:gv('mt_title'),attendees:gv('mt_att'),content:rtValue('mt_content')};
+  if(idx===-1){proj.meetings.push(m);window._mtgSelIdx=0;}
+  else proj.meetings[idx]=m;
+  save();cm(mid);rContent();toast('Note salvate');
+}
+
+function delMtg(pid,idx){
+  cdel('Eliminare questo meeting e le relative note?',()=>{
+    wsProjects().find(p=>p.id===pid).meetings.splice(idx,1);
+    window._mtgSelIdx=0;
+    save();rContent();toast('Eliminato','🗑');
+  });
+}
+
 
 // ===== INIT =====
 window.addEventListener('beforeunload',function(e){
