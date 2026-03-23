@@ -1271,30 +1271,69 @@ function addRaciAct(pid){
 function editRaciAct(pid,idx){
   const proj=wsProjects().find(p=>p.id===pid);const isN=idx===-1;
   const act=isN?{name:'',values:{}}:{...proj.raci.activities[idx],values:{...proj.raci.activities[idx].values}};
-  const mid='mra';const vo=role=>{
-    const cur=(act.values[role]||'');
-    // Il campo è un input testo libero per supportare valori multipli (R,A ecc.)
-    return`<input type="text" id="rv_${role.replace(/\s/g,'_')}" value="${cur}"
-      style="width:60px;text-align:center;text-transform:uppercase;font-weight:700"
-      placeholder="R/A/C/I" maxlength="5"
-      oninput="this.value=this.value.toUpperCase().replace(/[^RACI,]/g,'')"/>`;
+  const mid='mra';
+  // Checkbox multi-select per ogni ruolo: R, A, C, I
+  const RACI_OPTS=[
+    {v:'R',label:'R',desc:'Responsible',col:'#d97706',bg:'#ffedd5'},
+    {v:'A',label:'A',desc:'Accountable',col:'#b91c1c',bg:'#fee2e2'},
+    {v:'C',label:'C',desc:'Consulted',  col:'#1d4ed8',bg:'#dbeafe'},
+    {v:'I',label:'I',desc:'Informed',   col:'#15803d',bg:'#dcfce7'},
+  ];
+  const vo=role=>{
+    const cur=(act.values[role]||'').split(',').map(x=>x.trim()).filter(Boolean);
+    const rid=role.replace(/[^a-zA-Z0-9]/g,'_');
+    return`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">
+      ${RACI_OPTS.map(o=>{
+        const checked=cur.includes(o.v);
+        return`<label id="rclbl_${rid}_${o.v}" style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;padding:5px 10px;border-radius:6px;border:2px solid ${checked?o.col:'var(--bd)'};background:${checked?o.bg:'var(--sf)'};transition:all .15s;user-select:none"
+          onclick="raciToggle(this,'${rid}','${o.v}','${o.col}','${o.bg}')">
+          <input type="checkbox" id="rc_${rid}_${o.v}" ${checked?'checked':''} style="display:none"/>
+          <span style="font-weight:700;font-size:13px;color:${checked?o.col:'var(--tm)'}">${o.label}</span>
+          <span style="font-size:11px;color:${checked?o.col:'var(--tl)'}">· ${o.desc}</span>
+        </label>`;
+      }).join('')}
+    </div>`;
   };
-  $('modals').insertAdjacentHTML('beforeend',`<div class="mo" id="${mid}"><div class="modal mmd">
+  $('modals').insertAdjacentHTML('beforeend',`<div class="mo" id="${mid}"><div class="modal mlg">
     <div class="mhd"><h2>${isN?'Aggiungi':'Modifica'} Attività RACI</h2><button class="cx" onclick="cm('${mid}')">✕</button></div>
     <div class="mbody">
-      <div class="field" style="margin-bottom:16px"><label>Nome Attività</label><input type="text" id="ran" value="${(act.name||'').replace(/"/g,'&quot;')}"/></div>
-      <div class="fg fg2">${proj.raci.roles.map(r=>`<div class="field"><label>${r}</label><select id="rv_${r.replace(/\s+/g,'_')}">${vo(r)}</select></div>`).join('')}</div>
+      <div class="field" style="margin-bottom:20px"><label>Nome Attività / Deliverable</label>
+        <input type="text" id="ran" value="${(act.name||'').replace(/"/g,'&quot;')}" style="font-size:14px"/>
+      </div>
+      <div style="display:grid;gap:14px">
+        ${proj.raci.roles.map(r=>{
+          const rid=r.replace(/[^a-zA-Z0-9]/g,'_');
+          return`<div style="background:var(--s2);border:1px solid var(--bd);border-radius:var(--rs);padding:12px 14px">
+            <div style="font-size:11px;font-weight:700;color:var(--tm);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">${r}</div>
+            ${vo(r)}
+          </div>`;
+        }).join('')}
+      </div>
     </div>
-    <div class="mft"><button class="btn btng" onclick="cm('${mid}')">Annulla</button><button class="btn btnp" onclick="saveRaciAct('${pid}',${idx},'${mid}')">Salva</button></div>
+    <div class="mft"><button class="btn btng" onclick="cm('${mid}')">Annulla</button>
+      <button class="btn btnp" onclick="saveRaciAct('${pid}',${idx},'${mid}')">Salva</button></div>
   </div></div>`);
+}
+function raciToggle(lbl,rid,val,col,bg){
+  const cb=document.getElementById('rc_'+rid+'_'+val);
+  if(!cb)return;
+  const nowChecked=!cb.checked;
+  cb.checked=nowChecked;
+  lbl.style.borderColor=nowChecked?col:'var(--bd)';
+  lbl.style.background=nowChecked?bg:'var(--sf)';
+  const span=lbl.querySelectorAll('span');
+  span[0].style.color=nowChecked?col:'var(--tm)';
+  span[1].style.color=nowChecked?col:'var(--tl)';
 }
 function saveRaciAct(pid,idx,mid){
   const proj=wsProjects().find(p=>p.id===pid);const values={};
   proj.raci.roles.forEach(r=>{
-    let v=(document.getElementById('rv_'+r.replace(/\s+/g,'_'))?.value||'').trim().toUpperCase();
-    // Normalizza: rimuove caratteri non validi, deduplica
-    const parts=[...new Set(v.split(/[^RACI]+/).filter(x=>['R','A','C','I'].includes(x)))];
-    values[r]=parts.join(',');
+    const rid=r.replace(/[^a-zA-Z0-9]/g,'_');
+    const selected=['R','A','C','I'].filter(v=>{
+      const cb=document.getElementById('rc_'+rid+'_'+v);
+      return cb&&cb.checked;
+    });
+    values[r]=selected.join(',');
   });
   const act={name:gv('ran'),values};
   if(idx===-1)proj.raci.activities.push(act);else proj.raci.activities[idx]=act;
@@ -1624,13 +1663,11 @@ const XL_MAP = {
   budget: {
     'wbs / fase':'wbs','wbs':'wbs',
     'responsabile':'owner','owner':'owner',
-    'budget ore (h)':'budget_h','budget (h)':'budget_h','budget':'budget_h',
-    'pv
-planned value (h)':'pv_h','pv planned value (h)':'pv_h','pv ore (h)':'pv_h','pv (h)':'pv_h','pv':'pv_h',
-    'ev
-earned value (h)':'ev_h','ev earned value (h)':'ev_h','ev ore (h)':'ev_h','ev (h)':'ev_h','ev':'ev_h',
-    'ac
-actual cost (h)':'ac_h','ac actual cost (h)':'ac_h','ac ore (h)':'ac_h','ac (h)':'ac_h','ac':'ac_h',
+    'budget ore (h)':'budget_h','budget (h)':'budget_h','budget approvato (e)':'budget_h','budget':'budget_h',
+    'pv planned value (h)':'pv_h','pv ore (h)':'pv_h','pv (h)':'pv_h','pv':'pv_h',
+    'ev earned value (h)':'ev_h','ev ore (h)':'ev_h','ev (h)':'ev_h','ev':'ev_h',
+    'ac actual cost (h)':'ac_h','ac ore (h)':'ac_h','ac (h)':'ac_h','ac':'ac_h',
+    'budget approvato (€)':'budget_h','pv — planned value (€)':'pv_h','ev — earned value (€)':'ev_h','ac — actual cost (€)':'ac_h',
     '% completamento':'completion','completion':'completion',
     'note':'note'
   },
@@ -1810,9 +1847,17 @@ function handleXlsxImport(input){
             const mlHeaders=rows[mlHeaderIdx].map(h=>(h||'').toString().toLowerCase().trim());
             const mlFieldMap={'nome milestone':'name','data pianificata':'planned','data effettiva':'actual','stato':'status','note':'note'};
             const milestones=[];
+            // Section headers to stop at (labels in col1 with empty col2+)
+            const STOP_LABELS=['budget','obiettivi','assunzioni','moscow',
+              'must have','should have','could have',"won't have",'note','rag','status rag'];
             for(let i=mlHeaderIdx+1;i<rows.length;i++){
               const r=rows[i];
               if(!r[0])continue;
+              // Stop if this row looks like a section header:
+              // col1 has text but col2..col5 are all empty
+              const nonEmptyCols=r.slice(1,5).filter(Boolean).length;
+              const lbl=(r[0]||'').toString().toLowerCase().trim();
+              if(nonEmptyCols===0&&(STOP_LABELS.includes(lbl)||lbl===lbl.toUpperCase()&&lbl.length>2&&!lbl.match(/\d/)))break;
               const ml=xlRowToObj(mlHeaders,r,mlFieldMap);
               if(ml.name)milestones.push(ml);
             }
@@ -1861,12 +1906,22 @@ function handleXlsxImport(input){
             const r=rows[i];
             const actName=(r[activityCol>=0?activityCol:0]||'').toString().trim();
             if(!actName)continue;
+            // Skip legend/note rows starting with ℹ
+            if(actName.startsWith('\u2139'))continue;
             const values={};
             roles.forEach((role,j)=>{
               const v=(r[roleStartCol+j]||'').toString().trim().toUpperCase();
               // Supporta valori multipli: R,A / R+C / RA / R/A
               if(v){
-                const parts=v.split(/[,;+\/\s]+/).map(x=>x.trim().toUpperCase()).filter(x=>['R','A','C','I'].includes(x));
+                // Normalizza: R, R/A, R+A, RA, R-A → array di lettere valide
+                const parts=[...new Set(
+                  v.replace(/[^RACIraci]/g,' ')  // sostituisce separatori con spazi
+                   .split(/\s+/)
+                   .join('')                       // rimuove spazi rimasti
+                   .toUpperCase()
+                   .split('')                      // divide carattere per carattere
+                   .filter(x=>['R','A','C','I'].includes(x))
+                )];
                 if(parts.length)values[role]=parts.join(',');
               }
             });
@@ -1900,6 +1955,9 @@ function handleXlsxImport(input){
           for(let i=headerIdx+1;i<rows.length;i++){
             const r=rows[i];
             if(!r.some(Boolean))continue;
+            // Skip legend rows (start with ℹ) and totals rows
+            const firstCell=(r[0]||'').toString().trim();
+            if(firstCell.startsWith('\u2139')||firstCell.toUpperCase()==='TOTALE')continue;
             const obj=xlRowToObj(headers,r,fieldMap);
             if(!Object.values(obj).some(v=>v!==''&&v!==null&&v!==undefined))continue;
             // id auto-generato se non presente (meetings e resources non hanno id)
