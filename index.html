@@ -1234,7 +1234,12 @@ function rRaci(proj,c,tb){
     <thead><tr><th>Attività / Deliverable</th>${(raci.roles||[]).map(r=>`<th>${r}</th>`).join('')}<th></th></tr></thead>
     <tbody>${(raci.activities||[]).map((act,i)=>`<tr>
       <td style="font-weight:600">${act.name||'—'}</td>
-      ${(raci.roles||[]).map(r=>{const v=act.values?.[r]||'';return`<td style="text-align:center">${v?`<span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:5px;font-size:12px;font-weight:700;${vs[v]||''}">${v}</span>`:'<span style="color:var(--tl)">—</span>'}</td>`;}).join('')}
+      ${(raci.roles||[]).map(r=>{
+        const raw=act.values?.[r]||'';
+        const parts=raw.split(',').map(x=>x.trim()).filter(Boolean);
+        const badges=parts.map(v=>`<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:5px;font-size:11px;font-weight:700;${vs[v]||'background:var(--b2);color:var(--tm)'}">${v}</span>`).join('');
+        return`<td style="text-align:center">${badges||'<span style="color:var(--tl)">—</span>'}</td>`;
+      }).join('')}
       <td><div class="ac"><button class="reb" onclick="editRaciAct('${proj.id}',${i})">Modifica</button><button class="deb" onclick="delRaciAct('${proj.id}',${i})">✕</button></div></td>
     </tr>`).join('')}</tbody>
   </table></div>`;
@@ -1266,7 +1271,14 @@ function addRaciAct(pid){
 function editRaciAct(pid,idx){
   const proj=wsProjects().find(p=>p.id===pid);const isN=idx===-1;
   const act=isN?{name:'',values:{}}:{...proj.raci.activities[idx],values:{...proj.raci.activities[idx].values}};
-  const mid='mra';const vo=role=>['','R','A','C','I'].map(v=>`<option value="${v}" ${(act.values[role]||'')===v?'selected':''}>${v||'—'}</option>`).join('');
+  const mid='mra';const vo=role=>{
+    const cur=(act.values[role]||'');
+    // Il campo è un input testo libero per supportare valori multipli (R,A ecc.)
+    return`<input type="text" id="rv_${role.replace(/\s/g,'_')}" value="${cur}"
+      style="width:60px;text-align:center;text-transform:uppercase;font-weight:700"
+      placeholder="R/A/C/I" maxlength="5"
+      oninput="this.value=this.value.toUpperCase().replace(/[^RACI,]/g,'')"/>`;
+  };
   $('modals').insertAdjacentHTML('beforeend',`<div class="mo" id="${mid}"><div class="modal mmd">
     <div class="mhd"><h2>${isN?'Aggiungi':'Modifica'} Attività RACI</h2><button class="cx" onclick="cm('${mid}')">✕</button></div>
     <div class="mbody">
@@ -1278,7 +1290,12 @@ function editRaciAct(pid,idx){
 }
 function saveRaciAct(pid,idx,mid){
   const proj=wsProjects().find(p=>p.id===pid);const values={};
-  proj.raci.roles.forEach(r=>{values[r]=document.getElementById('rv_'+r.replace(/\s+/g,'_'))?.value||'';});
+  proj.raci.roles.forEach(r=>{
+    let v=(document.getElementById('rv_'+r.replace(/\s+/g,'_'))?.value||'').trim().toUpperCase();
+    // Normalizza: rimuove caratteri non validi, deduplica
+    const parts=[...new Set(v.split(/[^RACI]+/).filter(x=>['R','A','C','I'].includes(x)))];
+    values[r]=parts.join(',');
+  });
   const act={name:gv('ran'),values};
   if(idx===-1)proj.raci.activities.push(act);else proj.raci.activities[idx]=act;
   save();cm(mid);rContent();toast('Attività RACI salvata');
@@ -1607,10 +1624,13 @@ const XL_MAP = {
   budget: {
     'wbs / fase':'wbs','wbs':'wbs',
     'responsabile':'owner','owner':'owner',
-    'budget approvato (€)':'budget','budget':'budget',
-    'pv — planned value (€)':'pv','pv - planned value (€)':'pv','pv':'pv',
-    'ev — earned value (€)':'ev','ev - earned value (€)':'ev','ev':'ev',
-    'ac — actual cost (€)':'ac','ac - actual cost (€)':'ac','ac':'ac',
+    'budget ore (h)':'budget_h','budget (h)':'budget_h','budget':'budget_h',
+    'pv
+planned value (h)':'pv_h','pv planned value (h)':'pv_h','pv ore (h)':'pv_h','pv (h)':'pv_h','pv':'pv_h',
+    'ev
+earned value (h)':'ev_h','ev earned value (h)':'ev_h','ev ore (h)':'ev_h','ev (h)':'ev_h','ev':'ev_h',
+    'ac
+actual cost (h)':'ac_h','ac actual cost (h)':'ac_h','ac ore (h)':'ac_h','ac (h)':'ac_h','ac':'ac_h',
     '% completamento':'completion','completion':'completion',
     'note':'note'
   },
@@ -1651,6 +1671,21 @@ const XL_MAP = {
     'raccomandazione':'recommendation','recommendation':'recommendation',
     'priorità':'priority','priorita':'priority','priority':'priority',
     'owner':'owner'
+  },
+  meetings: {
+    'data meeting':'date','data':'date','date':'date',
+    'titolo / oggetto':'title','titolo':'title','oggetto':'title','title':'title',
+    'partecipanti':'attendees','attendees':'attendees',
+    'note del meeting':'content','note':'content','content':'content'
+  },
+  resources: {
+    'nome risorsa':'name','nome':'name','name':'name',
+    'ruolo / profilo':'role','ruolo':'role','role':'role',
+    'fte':'fte',
+    'ore pianificate':'plannedHours','ore pianificate a progetto':'plannedHours','plannedhours':'plannedHours',
+    'ore consumate':'actualHours','actualhours':'actualHours',
+    'costo orario (€/h)':'hourlyRate','costo orario':'hourlyRate','hourlyrate':'hourlyRate',
+    'note':'note'
   }
 };
 
@@ -1658,7 +1693,10 @@ const XL_MAP = {
 const SHEET_TO_KEY = {
   'wbs':'wbs','schedule':'schedule','risk_register':'risks','risks':'risks',
   'issue_log':'issues','issues':'issues','budget_evm':'budget','budget':'budget',
-  'change_log':'changes','changes':'changes','stakeholders':'stakeholders','lessons_learned':'lessons','lessons':'lessons'
+  'change_log':'changes','changes':'changes','stakeholders':'stakeholders',
+  'lessons_learned':'lessons','lessons':'lessons',
+  'meeting_notes':'meetings','meetings':'meetings',
+  'resource_planning':'resources','resources':'resources'
 };
 
 function parseXlsxDate(v){
@@ -1758,15 +1796,19 @@ function handleXlsxImport(input){
             }
           });
 
-          // Milestone: cerca header row con "name" o "nome milestone"
+          // Milestone: cerca SOLO header row con "nome milestone" (mai 'name'/'milestone' da soli)
+          // Questo evita che header di sezione Excel tipo "Milestone" vengano confusi
           let mlHeaderIdx=-1;
           rows.forEach((r,i)=>{
+            // Cerca una riga che abbia "nome milestone" come prima cella
+            // E abbia almeno 3 celle non vuote (è una vera header row tabellare)
             const first=(r[0]||'').toString().toLowerCase().trim();
-            if(first==='nome milestone'||first==='name'||first==='milestone')mlHeaderIdx=i;
+            const nonEmpty=r.filter(Boolean).length;
+            if(first==='nome milestone'&&nonEmpty>=2)mlHeaderIdx=i;
           });
           if(mlHeaderIdx>=0){
             const mlHeaders=rows[mlHeaderIdx].map(h=>(h||'').toString().toLowerCase().trim());
-            const mlFieldMap={'nome milestone':'name','name':'name','data pianificata':'planned','data effettiva':'actual','stato':'status','note':'note'};
+            const mlFieldMap={'nome milestone':'name','data pianificata':'planned','data effettiva':'actual','stato':'status','note':'note'};
             const milestones=[];
             for(let i=mlHeaderIdx+1;i<rows.length;i++){
               const r=rows[i];
@@ -1822,7 +1864,11 @@ function handleXlsxImport(input){
             const values={};
             roles.forEach((role,j)=>{
               const v=(r[roleStartCol+j]||'').toString().trim().toUpperCase();
-              if(['R','A','C','I'].includes(v))values[role]=v;
+              // Supporta valori multipli: R,A / R+C / RA / R/A
+              if(v){
+                const parts=v.split(/[,;+\/\s]+/).map(x=>x.trim().toUpperCase()).filter(x=>['R','A','C','I'].includes(x));
+                if(parts.length)values[role]=parts.join(',');
+              }
             });
             activities.push({name:actName,values});
           }
@@ -1835,22 +1881,49 @@ function handleXlsxImport(input){
           if(!listKey)return;
           const fieldMap=XL_MAP[listKey];if(!fieldMap)return;
           const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
-          // trova header row: prima riga con almeno 3 colonne non vuote
-          const headerIdx=rows.findIndex(r=>r.filter(Boolean).length>=3);
+          // trova header row: prima riga con almeno 2 celle non vuote che contenga
+          // almeno una chiave riconoscibile dalla fieldMap
+          const mapKeys=Object.keys(fieldMap);
+          let headerIdx=-1;
+          for(let i=0;i<Math.min(rows.length,6);i++){
+            const r=rows[i];
+            if(r.filter(Boolean).length<2)continue;
+            const rowLower=r.map(h=>(h||'').toString().toLowerCase().trim());
+            if(rowLower.some(h=>mapKeys.includes(h))){headerIdx=i;break;}
+          }
           if(headerIdx<0)return;
           const headers=rows[headerIdx].map(h=>(h||'').toString().toLowerCase().trim());
           const items=[];
-          const prefixMap={wbs:'W',schedule:'T',risks:'R',issues:'I',changes:'CR',stakeholders:'S',lessons:'LL',budget:'B'};
+          const prefixMap={wbs:'W',schedule:'T',risks:'R',issues:'I',changes:'CR',
+            stakeholders:'S',lessons:'LL',budget:'B',meetings:'M',resources:'RS'};
           let autoIdx=1;
           for(let i=headerIdx+1;i<rows.length;i++){
             const r=rows[i];
-            if(!r.some(Boolean))continue; // skip empty rows
+            if(!r.some(Boolean))continue;
             const obj=xlRowToObj(headers,r,fieldMap);
-            if(!Object.values(obj).some(v=>v!==''))continue;
-            if(!obj.id){obj.id=`${prefixMap[listKey]||'X'}${String(autoIdx).padStart(3,'0')}`;}
-            // milestone bool
+            if(!Object.values(obj).some(v=>v!==''&&v!==null&&v!==undefined))continue;
+            // id auto-generato se non presente (meetings e resources non hanno id)
+            if(!obj.id&&!['meetings','resources'].includes(listKey)){
+              obj.id=`${prefixMap[listKey]||'X'}${String(autoIdx).padStart(3,'0')}`;
+            }
+            // milestone bool (schedule)
             if(listKey==='schedule'&&obj.milestone!==undefined){
-              obj.milestone=String(obj.milestone).toLowerCase()==='sì'||String(obj.milestone).toLowerCase()==='si'||obj.milestone===true;
+              obj.milestone=['sì','si','yes','true','1'].includes(
+                String(obj.milestone).toLowerCase().trim()
+              );
+            }
+            // critical path bool (wbs, schedule)
+            if(['wbs','schedule'].includes(listKey)&&obj.criticalPath!==undefined){
+              obj.criticalPath=['s','sì','si','yes','true','1'].includes(
+                String(obj.criticalPath).toLowerCase().trim()
+              );
+            }
+            // budget: mappa campi ore sui campi _h dell'app
+            if(listKey==='budget'){
+              ['budget','pv','ev','ac'].forEach(k=>{
+                if(obj[k]!==undefined&&obj[`${k}_h`]===undefined)obj[`${k}_h`]=obj[k];
+                delete obj[k];
+              });
             }
             items.push(obj);autoIdx++;
           }
