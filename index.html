@@ -3,10 +3,9 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Project Management Plan Cloud</title>
+<title>Project Management Plan</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -184,23 +183,7 @@ textarea{resize:vertical;min-height:68px}
 /* ws badge in sidebar */
 .ws-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:99px;font-size:10px;font-weight:700;background:rgba(255,255,255,.08);color:rgba(255,255,255,.55);margin:0 12px 10px;border:1px solid rgba(255,255,255,.08)}
 
-#login-screen{position:fixed;inset:0;background:var(--sidebar);display:flex;align-items:center;justify-content:center;z-index:9999}
-.lbox{background:var(--sf);border-radius:20px;padding:44px 40px;width:100%;max-width:420px;box-shadow:var(--sh3)}
-.lbox-logo{width:44px;height:44px;background:linear-gradient(135deg,#3b82f6,#1d4ed8);border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:16px;font-family:var(--fd);margin:0 auto 18px;box-shadow:0 4px 14px rgba(37,99,235,.35)}
-.lbox-title{font-family:var(--fd);font-size:21px;font-weight:800;color:var(--tx);text-align:center;letter-spacing:-.4px;margin-bottom:3px}
-.lbox-sub{font-size:13px;color:var(--tm);text-align:center;margin-bottom:26px}
-.ltabs{display:flex;background:var(--s3);border-radius:var(--rs);padding:3px;margin-bottom:22px}
-.ltab{flex:1;padding:7px;border-radius:6px;text-align:center;font-size:13px;font-weight:500;cursor:pointer;color:var(--tm);transition:all .15s}
-.ltab.active{background:var(--sf);color:var(--tx);box-shadow:var(--sh1)}
-.lmsg{border-radius:var(--rs);padding:10px 14px;font-size:13px;margin-bottom:14px;display:none}
-.lmsg.err{background:var(--dl);border:1px solid var(--dn);color:var(--dn)}
-.lmsg.info{background:var(--b0);border:1px solid var(--acc);color:var(--acc)}
-.sync-bar{position:fixed;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--b5),var(--b3));z-index:9998;animation:spulse 1.4s ease-in-out infinite;display:none}
-@keyframes spulse{0%,100%{opacity:.5}50%{opacity:1}}
-.upill{display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:99px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);cursor:pointer;transition:background .15s;margin:0 4px 8px}
-.upill:hover{background:rgba(255,255,255,.14)}
-.upill-av{width:22px;height:22px;border-radius:50%;background:var(--acc);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0}
-.upill-em{font-size:11px;color:rgba(255,255,255,.7);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
 
 
 /* RICH TEXT EDITOR */
@@ -224,37 +207,11 @@ textarea{resize:vertical;min-height:68px}
 </style>
 </head>
 <body>
-<div id="sync-bar" class="sync-bar"></div>
-<div id="login-screen">
-  <div class="lbox">
-    <div class="lbox-logo">PM</div>
-    <div class="lbox-title">Project Management Plan</div>
-    <div class="lbox-sub">Accedi per continuare</div>
-    <div class="ltabs">
-      <div class="ltab active" id="ltab-in" onclick="lTab('in')">Accedi</div>
-      <div class="ltab" id="ltab-up" onclick="lTab('up')">Registrati</div>
-    </div>
-    <div id="lmsg" class="lmsg"></div>
-    <div class="field" style="margin-bottom:14px">
-      <label>Email</label>
-      <input type="email" id="l-email" placeholder="nome@azienda.it" autocomplete="email" onkeydown="if(event.key==='Enter')lSubmit()"/>
-    </div>
-    <div class="field" style="margin-bottom:14px">
-      <label>Password</label>
-      <input type="password" id="l-pwd" placeholder="Minimo 6 caratteri" autocomplete="current-password" onkeydown="if(event.key==='Enter')lSubmit()"/>
-    </div>
-    <div class="field" id="l-pwd2-row" style="margin-bottom:14px;display:none">
-      <label>Ripeti Password</label>
-      <input type="password" id="l-pwd2" placeholder="Ripeti la password" onkeydown="if(event.key==='Enter')lSubmit()"/>
-    </div>
-    <button class="btn btnp" style="width:100%;justify-content:center" id="l-btn" onclick="lSubmit()">Accedi</button>
-  </div>
-</div>
-<div id="app" style="display:none">
+<div id="app">
   <div id="sidebar">
     <div class="slogo">
       <div class="lmark">PM</div>
-      <div><div class="ltext">Project Management</div><div class="lsub">Plan Cloud</div></div>
+      <div><div class="ltext">Project Management</div><div class="lsub">Plan</div></div>
     </div>
 
     <!-- Workspace selector -->
@@ -276,10 +233,8 @@ textarea{resize:vertical;min-height:68px}
     </div>
     <div id="snc"></div>
     <div class="sfooter">
-      <div id="u-pill"></div>
       <div id="sync-status" style="font-size:10px;color:rgba(100,220,130,.7);padding:0 14px 6px;min-height:14px"></div>
       <div class="nitem" onclick="showImpExp()"><span class="nicon">⬆⬇</span>Import / Export</div>
-      <div class="nitem" style="color:rgba(255,120,120,.65)" onclick="lOut()">⎋ Esci</div>
     </div>
   </div>
 
@@ -314,97 +269,32 @@ let S={workspaces:[],activeWs:null,activeProj:null,sec:'dashboard'};
 const gv=id=>document.getElementById(id)?.value||'';
 const $=id=>document.getElementById(id);
 
-// ===== SUPABASE =====
-const _SB=supabase.createClient(
-  'https://ctapqhcxuwbxwnmnrfux.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN0YXBxaGN4dXdieHdubW5yZnV4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5MTMyNTksImV4cCI6MjA4OTQ4OTI1OX0.5coWgVxGY0Pwz62iiZrS7otiYuXvdDPsAQoPddFpNCY',
-  {auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}}
-);
-let _u=null,_stimer=null,_hasRow=null;
-
-let _pendingSave=false; // true = ci sono modifiche non ancora salvate
+// ===== STORAGE (localStorage) =====
+let _u=null,_pendingSave=false,_stimer=null;
 
 function save(){
-  _pendingSave=true;
-  sbSaved(false); // mostra indicatore "non salvato"
-  clearTimeout(_stimer);
-  _stimer=setTimeout(_sbSave,1200);
+  _pendingSave=true;sbSaved(false);
+  clearTimeout(_stimer);_stimer=setTimeout(_doSave,600);
 }
-
-// Salvataggio immediato (es. prima del logout) — bypassa il debounce
-async function saveNow(){
-  if(!_pendingSave&&_hasRow!==null)return; // niente da salvare
-  clearTimeout(_stimer);
-  await _sbSave();
-}
-
-async function _sbSave(){
-  if(!_u)return;
-  sbSync(true);
+function _doSave(){
   try{
-    const ws=JSON.parse(JSON.stringify(S.workspaces));
-    const now=new Date().toISOString();
-    if(_hasRow===null){
-      const {data,error:selErr}=await _SB.from('pmp_data').select('id').eq('user_id',_u.id).maybeSingle();
-      if(selErr){console.error('[PMP save] select error:',selErr);return;}
-      _hasRow=!!data;
-    }
-    let err;
-    if(_hasRow){
-      ({error:err}=await _SB.from('pmp_data')
-        .update({workspaces:ws,updated_at:now})
-        .eq('user_id',_u.id));
-    }else{
-      ({error:err}=await _SB.from('pmp_data')
-        .insert({user_id:_u.id,workspaces:ws,updated_at:now}));
-      if(!err)_hasRow=true;
-      if(err&&err.code==='23505'){_hasRow=true;setTimeout(_sbSave,200);return;}
-    }
-    if(err){
-      console.error('[PMP save]',err.code,err.message);
-      toast('Errore sync — riprovo...','x');
-      // Retry dopo 4 secondi
-      setTimeout(_sbSave,4000);
-    }else{
-      _pendingSave=false;
-      sbSaved(true); // mostra "salvato"
-      console.log('[PMP save] OK',new Date().toLocaleTimeString());
-    }
-  }catch(e){
-    console.error('[PMP save] exception:',e);
-    toast('Errore connessione','x');
-  }finally{
-    sbSync(false);
-  }
+    localStorage.setItem('pmp6',JSON.stringify({workspaces:S.workspaces,activeWs:S.activeWs}));
+    _pendingSave=false;sbSaved(true);
+  }catch(e){console.error('[PMP save]',e);toast('Errore salvataggio','x');}
 }
-async function load(){
-  if(!_u)return;
-  _hasRow=null;
-  sbSync(true);
+async function saveNow(){clearTimeout(_stimer);_doSave();}
+function load(){
   try{
-    const {data,error}=await _SB.from('pmp_data').select('workspaces').eq('user_id',_u.id).maybeSingle();
-    if(error){console.error('[PMP load]',error);throw error;}
-    S.workspaces=data?data.workspaces||[]:[]; _hasRow=!!data;
+    const d=localStorage.getItem('pmp6');
+    if(d){const p=JSON.parse(d);S.workspaces=p.workspaces||[];S.activeWs=p.activeWs||null;}
   }catch(e){S.workspaces=[];}
-  finally{sbSync(false);}
 }
-function sbSync(on){
-  const b=document.getElementById('sync-bar');
-  if(b)b.style.display=on?'block':'none';
-}
+function sbSync(on){}
 function sbSaved(saved){
-  // Aggiorna l'indicatore di stato nella sidebar
-  const el=document.getElementById('sync-status');
-  if(!el)return;
-  if(saved){
-    el.textContent='Salvato';
-    el.style.color='rgba(100,220,130,.7)';
-  }else{
-    el.textContent='Modifiche non salvate...';
-    el.style.color='rgba(255,200,80,.8)';
-  }
+  const el=document.getElementById('sync-status');if(!el)return;
+  if(saved){el.textContent='Salvato';el.style.color='rgba(100,220,130,.7)';}
+  else{el.textContent='Modifiche non salvate...';el.style.color='rgba(255,200,80,.8)';}
 }
-
 
 function wsProjects(){
   const ws=S.workspaces.find(w=>w.id===S.activeWs);
@@ -740,7 +630,40 @@ function rHomeWs(){
 }
 
 // ═══════════════════ DASHBOARD ════════════════════════════════════════════════
+// Sincronizza le milestone dallo Schedule alla Dashboard.
+// Le attività con milestone=true vengono aggiunte automaticamente.
+// Le date e lo stato vengono mantenuti se già inseriti manualmente.
+function syncMilestonesFromSchedule(proj){
+  if(!proj.dashboard.milestones)proj.dashboard.milestones=[];
+  const scheduled=(proj.schedule||[]).filter(x=>x.milestone);
+  
+  scheduled.forEach(task=>{
+    const name=task.name||task.id||'';
+    if(!name)return;
+    // Cerca se esiste già una milestone con lo stesso nome
+    const existing=proj.dashboard.milestones.find(m=>m.name===name);
+    if(!existing){
+      // Aggiungi solo il nome — date e stato li gestisce l'utente
+      proj.dashboard.milestones.push({name,planned:'',actual:'',status:'',note:''});
+    }
+    // Se esiste già non sovrascrivere (l'utente potrebbe aver compilato le date)
+  });
+
+  // Rimuovi milestone auto-generate che non esistono più nello schedule
+  // (solo quelle senza date — se l'utente ha compilato le date non toccare)
+  proj.dashboard.milestones=proj.dashboard.milestones.filter(m=>{
+    const isAutoGenerated=!m.planned&&!m.actual&&!m.status&&!m.note;
+    if(!isAutoGenerated)return true; // ha dati manuali, tieni sempre
+    // Tieni se esiste nello schedule come milestone, oppure se non è "auto"
+    const inSchedule=scheduled.some(t=>(t.name||t.id||'')=== m.name);
+    return inSchedule;
+  });
+}
+
+
 function rDash(proj,c,tb){
+  // Sincronizza milestone da Schedule → Dashboard prima di renderizzare
+  syncMilestonesFromSchedule(proj);
   const d=proj.dashboard;
   tb.innerHTML=`<button class="btn btnp bsm" onclick="editDash('${proj.id}')">✏ Modifica</button>`;
 
@@ -1092,6 +1015,8 @@ function saveItem(pid,key,idx,mid){
     item.id=item.id||`${pre}${(proj[key].length+1).toString().padStart(3,'0')}`;
     proj[key].push(item);
   }else{proj[key][idx]=item;}
+  // Se l'elemento è nello schedule, sincronizza subito le milestone in dashboard
+  if(key==='schedule')syncMilestonesFromSchedule(proj);
   save();cm(mid);rContent();toast('Salvato ✓');
 }
 
@@ -1773,6 +1698,62 @@ function xlRowToObj(headers, row, fieldMap){
   return obj;
 }
 
+// Converte sintassi markdown semplice → HTML per il rich text editor
+// Supporta: **bold**, *italic*, - bullet, 1. numbered, paragrafi
+function markdownToHtml(text){
+  if(!text||typeof text!=='string')return text;
+  const lines=text.split(/\r?\n/);
+  let html='';
+  let inUl=false,inOl=false;
+
+  const flushList=()=>{
+    if(inUl){html+='</ul>';inUl=false;}
+    if(inOl){html+='</ol>';inOl=false;}
+  };
+
+  const inlineFormat=s=>{
+    // **bold** e *italic* — ordine importante: bold prima
+    return s
+      .replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')
+      .replace(/\*(.+?)\*/g,'<i>$1</i>');
+  };
+
+  lines.forEach(rawLine=>{
+    const line=rawLine;
+    const trimmed=line.trim();
+
+    // Riga vuota → chiude lista, aggiunge separazione
+    if(!trimmed){
+      flushList();
+      return;
+    }
+
+    // Elenco puntato: - testo  oppure • testo
+    if(/^[-•\u2022]\s+/.test(trimmed)){
+      if(inOl){html+='</ol>';inOl=false;}
+      if(!inUl){html+='<ul>';inUl=true;}
+      html+=`<li>${inlineFormat(trimmed.replace(/^[-•\u2022]\s+/,''))}</li>`;
+      return;
+    }
+
+    // Elenco numerato: 1. testo  oppure 2. testo ecc.
+    if(/^\d+\.\s+/.test(trimmed)){
+      if(inUl){html+='</ul>';inUl=false;}
+      if(!inOl){html+='<ol>';inOl=true;}
+      html+=`<li>${inlineFormat(trimmed.replace(/^\d+\.\s+/,''))}</li>`;
+      return;
+    }
+
+    // Testo normale — chiude eventuali liste aperte
+    flushList();
+    html+=inlineFormat(trimmed)+'<br>';
+  });
+
+  flushList();
+  // Rimuove <br> finali
+  return html.replace(/(<br>)+$/,'').trim();
+}
+
 function handleXlsxImport(input){
   const f=input.files[0];if(!f)return;
   // Usa il target scelto nel modal picker, oppure il progetto attivo come fallback
@@ -1820,6 +1801,27 @@ function handleXlsxImport(input){
             if(dashInfo.sponsor)proj.charter.sponsor=dashInfo.sponsor;
             imported++;log.push('Dashboard');
           }
+
+          // Campi rich text: converti markdown → HTML
+          const RT_FIELDS_DASH=['obiettivi','objectives','assunzioni','assumptions',
+            'must have','should have','could have',"won't have",'wont have'];
+          rows.forEach(r=>{
+            const lbl=(r[0]||'').toString().toLowerCase().trim();
+            const val=(r[1]||'').toString().trim();
+            if(!val)return;
+            if(lbl==='obiettivi'||lbl==='objectives')
+              proj.dashboard.objectives=markdownToHtml(val);
+            else if(lbl==='assunzioni'||lbl==='assumptions')
+              proj.dashboard.assumptions=markdownToHtml(val);
+            else if(lbl==='must have')
+              {if(!proj.dashboard.moscow)proj.dashboard.moscow={};proj.dashboard.moscow.must=markdownToHtml(val);}
+            else if(lbl==='should have')
+              {if(!proj.dashboard.moscow)proj.dashboard.moscow={};proj.dashboard.moscow.should=markdownToHtml(val);}
+            else if(lbl==='could have')
+              {if(!proj.dashboard.moscow)proj.dashboard.moscow={};proj.dashboard.moscow.could=markdownToHtml(val);}
+            else if(lbl==="won't have"||lbl==='wont have')
+              {if(!proj.dashboard.moscow)proj.dashboard.moscow={};proj.dashboard.moscow.wont=markdownToHtml(val);}
+          });
 
           // Status RAG
           const ragMap={scope:'scope',schedule:'schedule',budget:'budget','qualità':'quality',qualita:'quality',rischi:'risks'};
@@ -1877,13 +1879,22 @@ function handleXlsxImport(input){
             'vincoli':'constraints','assunzioni':'assumptions','dipendenze esterne':'dependencies',
             'stakeholder chiave':'stakeholders','rischi principali iniziali':'initialRisks','rischi iniziali':'initialRisks'
           };
+          // Campi rich text del charter
+          const CHARTER_RT_FIELDS=['objective','secondaryobj','benefits','inscope','outscope',
+            'constraints','assumptions','dependencies','stakeholders','initialrisks'];
           let found=0;
           rows.forEach(r=>{
             const lbl=(r[0]||'').toString().toLowerCase().trim();
             const val=(r[1]||'').toString().trim();
             const mapped=charterMap[lbl];
             if(mapped&&val){
-              proj.charter[mapped]=['start','end'].includes(mapped)?parseXlsxDate(r[1]):val;
+              if(['start','end'].includes(mapped)){
+                proj.charter[mapped]=parseXlsxDate(r[1]);
+              }else if(CHARTER_RT_FIELDS.includes(mapped.toLowerCase())){
+                proj.charter[mapped]=markdownToHtml(val);
+              }else{
+                proj.charter[mapped]=val;
+              }
               found++;
             }
           });
@@ -1982,6 +1993,10 @@ function handleXlsxImport(input){
                 if(obj[k]!==undefined&&obj[`${k}_h`]===undefined)obj[`${k}_h`]=obj[k];
                 delete obj[k];
               });
+            }
+            // meetings: converti content da markdown a HTML
+            if(listKey==='meetings'&&obj.content){
+              obj.content=markdownToHtml(obj.content);
             }
             items.push(obj);autoIdx++;
           }
@@ -2246,60 +2261,13 @@ function delMtg(pid,idx){
 
 // ===== INIT =====
 window.addEventListener('beforeunload',function(e){
-  if(_pendingSave){e.preventDefault();e.returnValue='';}
+  if(_pendingSave){clearTimeout(_stimer);_doSave();}
 });
-
-// _showApp e _showLogin sono funzioni globali accessibili da lSubmit e onAuthStateChange
-function _showApp(user){
-  _u=user;
-  document.getElementById('login-screen').style.display='none';
-  document.getElementById('app').style.display='flex';
-  rUpill();rWsSel();rSidebar();rSecNav();rTopbar();rContent();
-  sbSaved(true);
+load();
+if(S.workspaces.length&&!S.workspaces.find(function(w){return w.id===S.activeWs;})){
+  S.activeWs=S.workspaces[0].id;
 }
-function _showLogin(){
-  _u=null;
-  _hasRow=null;
-  S={workspaces:[],activeWs:null,activeProj:null,sec:'dashboard'};
-  document.getElementById('login-screen').style.display='flex';
-  document.getElementById('app').style.display='none';
-}
-
-// onAuthStateChange gestisce SOLO logout e refresh token silenzioso
-// Login e caricamento iniziale sono gestiti direttamente da lSubmit e getSession()
-_SB.auth.onAuthStateChange(function(event,session){
-  console.log('[PMP] auth event:',event,'user:',(session&&session.user?session.user.email:'none'));
-  if(event==='SIGNED_OUT'||event==='USER_DELETED'){
-    _showLogin();
-    return;
-  }
-  if(event==='TOKEN_REFRESHED'){
-    if(session&&session.user)_u=session.user;
-    return;
-  }
-  // Tutti gli altri eventi (SIGNED_IN, INITIAL_SESSION) ignorati —
-  // gestiti direttamente da getSession() qui sotto o da lSubmit
-});
-
-// Controlla sessione esistente al caricamento (gestisce CTRL+R)
-(async function(){
-  try{
-    var gs=await _SB.auth.getSession();
-    if(gs.data&&gs.data.session&&gs.data.session.user){
-      _u=gs.data.session.user;
-      await load();
-      if(S.workspaces.length&&!S.workspaces.find(function(w){return w.id===S.activeWs;})){
-        S.activeWs=S.workspaces[0].id;
-      }
-      _showApp(_u);
-    }else{
-      _showLogin();
-    }
-  }catch(e){
-    console.error('[PMP] init error:',e);
-    _showLogin();
-  }
-}());
+rWsSel();rSidebar();rSecNav();rTopbar();rContent();
 </script>
 </body>
 </html>
